@@ -388,7 +388,7 @@ if len(vault_data) > 0:
         st.metric("调拨总成本", f"¥{vault_data['total_cost'].sum():,.0f}")
         st.metric("单公里成本", f"¥{(vault_data['total_cost']/vault_data['distance_km']).mean():.0f}")
     
-    st.info("🚗 金库调拨业务：浦东新区 → 浦西各区，固定路线，高安全等级")
+    st.info("🚗 金库调拨业务：浦东新区 → 浦西，固定路线，高安全等级")
 else:
     st.warning("当前时段无金库调拨业务")
 st.markdown('</div>', unsafe_allow_html=True)
