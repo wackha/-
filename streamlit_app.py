@@ -733,30 +733,30 @@ if len(vault_data) > 0:
         st.metric("调拨总成本", f"¥{vault_data['total_cost'].sum():.0f}")
         st.metric("平均车辆成本", f"¥{vault_data['vehicle_cost'].mean():.0f}")
     
-    # 显示成本构成详情
-    st.markdown("#### 💰 运钞车成本构成分析")
-    col_c1, col_c2, col_c3, col_c4 = st.columns(4)
-    
-    with col_c1:
-        hourly_rate = 75000 / 30 / 8
-        st.metric("基础时成本", f"¥{hourly_rate:.1f}/小时")
-        st.caption("75000元/月 ÷ 30天 ÷ 8小时")
-    
-    with col_c2:
-        st.metric("超时费率", "¥300/小时")
-        overtime_total = vault_data['overtime_cost'].sum() if 'overtime_cost' in vault_data.columns else 0
-        st.caption(f"本批次超时费：¥{overtime_total:.0f}")
-    
-    with col_c3:
-        st.metric("超公里费率", "¥12/公里")
-        over_km_total = vault_data['over_km_cost'].sum() if 'over_km_cost' in vault_data.columns else 0
-        st.caption(f"本批次超公里费：¥{over_km_total:.0f}")
-    
-    with col_c4:
-        st.metric("标准公里数", "15km")
-        st.caption("金库调拨统一标准")
-    
-    st.info("🚗 金库调拨业务：浦东新区 → 黄浦区，固定15km路线，统一标准公里数")
+# 显示成本构成详情
+st.markdown("#### 💰 运钞车成本构成分析")
+col_c1, col_c2, col_c3, col_c4 = st.columns(4)
+
+with col_c1:
+    hourly_rate = 75000 / 30 / 8
+    st.metric("基础时成本", f"¥{hourly_rate:.1f}/小时")
+    st.caption("75000元/月 ÷ 30天 ÷ 8小时")
+
+with col_c2:
+    st.metric("超时费率", "¥300/小时")
+    overtime_total = vault_data['overtime_cost'].sum() if 'overtime_cost' in vault_data.columns else 0
+    st.caption(f"本批次超时费：¥{overtime_total:.0f}")
+
+with col_c3:
+    st.metric("超公里费率", "¥12/公里")
+    over_km_total = vault_data['over_km_cost'].sum() if 'over_km_cost' in vault_data.columns else 0
+    st.caption(f"本批次超公里费：¥{over_km_total:.0f}")
+
+with col_c4:
+    st.metric("标准公里数", "15km")
+    st.caption("金库调拨统一标准")
+
+st.info("🚗 金库调拨业务：浦东新区 → 黄浦区，固定15km路线，统一标准公里数")
 else:
     st.warning("当前时段无金库调拨业务")
 
@@ -782,8 +782,8 @@ if len(counting_data) > 0:
         st.metric("清点总成本", f"¥{counting_data['total_cost'].sum():.0f}")
         st.metric("平均清点时长", f"{counting_data['time_duration'].mean():.0f}分钟")
     
-    # 成本构成分析
-    st.markdown("#### 💰 清点成本构成分析")
+    # 现金清点专用成本构成分析
+    st.markdown("#### 💰 现金清点成本构成分析") 
     col_cost1, col_cost2, col_cost3, col_cost4 = st.columns(4)
     
     with col_cost1:
@@ -810,10 +810,22 @@ if len(counting_data) > 0:
             st.metric("小笔清点人工成本", "¥0")
             st.caption("数据生成中...")
     
-    with col_c4:
-        avg_efficiency = counting_data['efficiency_ratio'].mean() if len(counting_data) > 0 else 0
-        st.metric("清点效率", f"{avg_efficiency:.3f}")
-        st.caption("综合处理效率")
+    with col_cost4:
+        # ✅ 正确位置：现金清点效率指标
+        if len(counting_data) > 0:
+            # 计算现金清点专用效率：处理金额/(时长×人员数)
+            counting_data_copy = counting_data.copy()
+            counting_data_copy['counting_efficiency'] = (
+                counting_data_copy['amount'] / 
+                (counting_data_copy['time_duration'] * counting_data_copy['staff_count'])
+            )
+            avg_counting_efficiency = counting_data_copy['counting_efficiency'].mean()
+            
+            st.metric("清点效率", f"{avg_counting_efficiency:.0f}")
+            st.caption("元/(分钟·人)")
+        else:
+            st.metric("清点效率", "0")
+            st.caption("暂无清点数据")
     
     # 大笔vs小笔对比图表
     if len(large_counting) > 0 and len(small_counting) > 0:
