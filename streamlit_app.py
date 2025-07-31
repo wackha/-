@@ -327,162 +327,88 @@ def calculate_vault_transfer_cost():
         # 不再返回 labor_cost
     }
 
-# 数据生成函数
 @st.cache_data(ttl=60)  # 缓存1分钟
 def generate_sample_data():
     """生成示例数据 - 根据业务比例要求调整"""
     np.random.seed(int(time.time()) // 60)  # 每分钟更新
-    
+
     business_types = ['金库运送', '上门收款', '金库调拨', '现金清点']
-    # 业务比例配置：金库运送占大头(45%)，上门收款较少(20%)，现金清点为两者40%(28.75%)，金库调拨每天1次(6.25%)
     business_probabilities = [0.45, 0.20, 0.0625, 0.2875]
-    
     regions = ['黄浦区', '徐汇区', '长宁区', '静安区', '普陀区', '虹口区', '杨浦区', '闵行区',
-              '宝山区', '嘉定区', '浦东新区', '金山区', '松江区', '青浦区', '奉贤区', '崇明区']
-    
+               '宝山区', '嘉定区', '浦东新区', '金山区', '松江区', '青浦区', '奉贤区', '崇明区']
     n_records = 300
-    
-    # 生成业务类型
+
+    # 生成业务类型和区域
     business_type_list = np.random.choice(business_types, n_records, p=business_probabilities)
-    
-    # 生成区域，金库调拨特殊处理
     region_list = []
     for i in range(n_records):
         if business_type_list[i] == '金库调拨':
-            # 金库调拨固定为浦东新区（浦东到浦西）
             region_list.append('浦东新区')
         else:
-            # 其他业务类型随机选择区域
             region_list.append(np.random.choice(regions))
-    
-    # 生成金额数据，确保现金清点业务有合理的大笔小笔分布
+
+    # 生成金额
     amount_list = []
     for i in range(n_records):
         if business_type_list[i] == '现金清点':
-            # 现金清点：30%概率为大笔(100万以上)，70%概率为小笔
             if np.random.random() < 0.3:
                 amount = np.random.uniform(1000000, 10000000)
             else:
                 amount = np.random.uniform(10000, 800000)
-            amount_list.append(amount)
         elif business_type_list[i] == '金库调拨':
-            # 金库调拨：使用专门的成本计算
-            vault_result = calculate_vault_transfer_cost()
-            
-            vehicle_costs.append(vault_result['vehicle_cost'])
-            labor_costs.append(0)  # 只要运钞车费用，无人工费用
-            equipment_costs.append(0)
-            time_durations.append(vault_result['time_duration'])
-            counting_details.append({})
-    
-            # 成本明细
-            cost_details.append({
-                'basic_cost': vault_result['basic_cost'],
-                'overtime_cost': vault_result['overtime_cost'],
-                'over_km_cost': vault_result['over_km_cost'],
-                'standard_distance': vault_result['standard_distance'],
-                'area_type': vault_result['area_type']
-            })
-
+            amount = np.random.uniform(5000000, 20000000)
         else:
-            # 金库运送、上门收款：使用通用车辆成本计算
-            time_hours = row['time_duration'] / 60
-            vehicle_cost, cost_detail = calculate_vehicle_cost(
-                row['distance_km'],
-                time_hours,
-                row['region']
-            )
-            vehicle_costs.append(vehicle_cost)
-            labor_costs.append(0)  # 只要运钞车费用，无人工费用
-            equipment_costs.append(row['distance_km'] * 2.5)
-            time_durations.append(row['time_duration'])
-            counting_details.append({})
-            cost_details.append(cost_detail)
-    else:
-        # 金库运送、上门收款金额随机，但不影响成本
-        amount_list.append(np.random.uniform(10000, 1000000))
-    
+            amount = np.random.uniform(10000, 1000000)
+        amount_list.append(amount)
+
+    # 生成距离和时长
+    distance_list = []
+    time_duration_list = []
+    for i in range(n_records):
+        if business_type_list[i] == '金库调拨':
+            distance_list.append(15.0)
+            base_hours = np.random.uniform(1, 2)
+            overtime_hours = np.random.uniform(0.5, 1.5) if np.random.random() < 0.1 else 0
+            time_duration_list.append((base_hours + overtime_hours) * 60)
+        else:
+            d = np.random.gamma(2, 5)
+            distance_list.append(d)
+            t = np.random.gamma(3, 20)
+            time_duration_list.append(t)
+
+    # 生成其他字段
     data = {
         'txn_id': [f'TXN{i:06d}' for i in range(n_records)],
         'business_type': business_type_list,
         'region': region_list,
-        'amount': amount_list,  # 使用新的金额生成逻辑
-        'distance_km': np.random.gamma(2, 5, n_records),
-        'time_duration': np.random.gamma(3, 20, n_records),
-        'vehicle_cost': np.random.normal(200, 50, n_records),
-        'labor_cost': np.random.normal(150, 30, n_records),
+        'amount': amount_list,
+        'distance_km': distance_list,
+        'time_duration': time_duration_list,
         'efficiency_ratio': np.random.beta(3, 2, n_records),
-        'start_time': pd.date_range(start=datetime.now() - timedelta(hours=24), 
-                                   periods=n_records, freq='5min'),
+        'start_time': pd.date_range(start=datetime.now() - timedelta(hours=24), periods=n_records, freq='5min'),
         'is_anomaly': np.random.choice([True, False], n_records, p=[0.1, 0.9]),
-        # 新增字段：市场冲击场景
-        'market_scenario': np.random.choice(['正常', '高需求期', '紧急状况', '节假日'], 
-                                          n_records, p=[0.6, 0.2, 0.1, 0.1]),
-        # 动态时段权重
+        'market_scenario': np.random.choice(['正常', '高需求期', '紧急状况', '节假日'], n_records, p=[0.6, 0.2, 0.1, 0.1]),
         'time_weight': np.random.choice([1.0, 1.1, 1.3, 1.6], n_records, p=[0.4, 0.3, 0.2, 0.1])
     }
-    
     df = pd.DataFrame(data)
-    
-    # 特殊处理金库调拨的距离和成本
-    vault_transfer_mask = df['business_type'] == '金库调拨'
-    
-    # 金库调拨固定距离15km
-    df.loc[vault_transfer_mask, 'distance_km'] = 15.0
-    
-    # 运钞车成本计算：75000元/月 ÷ 30天 ÷ 8小时 = 312.5元/小时
-    hourly_cost = 75000 / 30 / 8  # 312.5元/小时
-    
-    # 金库调拨成本构成
-    vault_count = vault_transfer_mask.sum()
-    if vault_count > 0:
-        # 基础运行时间（假设1-2小时）
-        base_hours = np.random.uniform(1, 2, vault_count)
-        
-        # 超时情况（10%概率超时0.5-1.5小时）
-        overtime_hours = np.where(
-            np.random.random(vault_count) < 0.1,  # 10%概率超时
-            np.random.uniform(0.5, 1.5, vault_count),
-            0
-        )
-        
-        # 超公里情况（5%概率超出1-3公里）
-        over_km = np.where(
-            np.random.random(vault_count) < 0.05,  # 5%概率超公里
-            np.random.uniform(1, 3, vault_count),
-            0
-        )
-        
-        # 计算总成本
-        basic_cost = base_hours * hourly_cost  # 基础成本
-        overtime_cost = overtime_hours * 300   # 超时费用
-        over_km_cost = over_km * 12           # 超公里费用
-    
-    df.loc[vault_transfer_mask, 'vehicle_cost'] = basic_cost + overtime_cost + over_km_cost
-    df.loc[vault_transfer_mask, 'labor_cost'] = np.random.uniform(200, 400, vault_count)  # 人工成本
-    df.loc[vault_transfer_mask, 'amount'] = np.random.uniform(5000000, 20000000, vault_count)  # 调拨金额
-    df.loc[vault_transfer_mask, 'time_duration'] = (base_hours + overtime_hours) * 60  # 转换为分钟
 
-    # 计算各业务类型的成本（使用新的分类计算方法）
+    # 下面统一计算成本
     vehicle_costs = []
     labor_costs = []
     equipment_costs = []
     time_durations = []
     cost_details = []
-    counting_details = []  # 现金清点详情
-    
+    counting_details = []
+
     for idx, row in df.iterrows():
         business_type = row['business_type']
-    
         if business_type == '现金清点':
-            # 现金清点：使用专门的成本计算
             counting_result = calculate_cash_counting_cost(row['amount'])
-            vehicle_costs.append(0)  # 现金清点无车辆成本
+            vehicle_costs.append(0)
             labor_costs.append(counting_result['labor_cost'])
             equipment_costs.append(counting_result['equipment_cost'])
             time_durations.append(counting_result['time_duration'])
             counting_details.append(counting_result)
-            # 成本明细
             cost_details.append({
                 'basic_cost': 0,
                 'overtime_cost': 0,
@@ -490,16 +416,13 @@ def generate_sample_data():
                 'standard_distance': 0,
                 'area_type': '清点中心'
             })
-    
         elif business_type == '金库调拨':
-            # 金库调拨：使用专门的成本计算
             vault_result = calculate_vault_transfer_cost()
             vehicle_costs.append(vault_result['vehicle_cost'])
-            labor_costs.append(0)  # 只要运钞车费用，无人工费用
-            equipment_costs.append(0)  # 金库调拨无特殊设备成本
+            labor_costs.append(0)
+            equipment_costs.append(0)
             time_durations.append(vault_result['time_duration'])
-            counting_details.append({})  # 空的清点详情
-            # 成本明细
+            counting_details.append({})
             cost_details.append({
                 'basic_cost': vault_result['basic_cost'],
                 'overtime_cost': vault_result['overtime_cost'],
@@ -507,48 +430,39 @@ def generate_sample_data():
                 'standard_distance': vault_result['standard_distance'],
                 'area_type': vault_result['area_type']
             })
-    
         else:
-            # 金库运送、上门收款：使用通用车辆成本计算
-            time_hours = row['time_duration'] / 60  # 转换为小时
+            time_hours = row['time_duration'] / 60
             vehicle_cost, cost_detail = calculate_vehicle_cost(
                 row['distance_km'],
                 time_hours,
                 row['region']
             )
             vehicle_costs.append(vehicle_cost)
-            labor_costs.append(0)  # 只要运钞车费用，无人工费用
-            equipment_costs.append(row['distance_km'] * 2.5)  # 设备成本按距离计算
+            labor_costs.append(0)
+            equipment_costs.append(row['distance_km'] * 2.5)
             time_durations.append(row['time_duration'])
-            counting_details.append({})  # 空的清点详情
+            counting_details.append({})
             cost_details.append(cost_detail)
-        
-        # 更新DataFrame
-        df['vehicle_cost'] = vehicle_costs
-        df['labor_cost'] = labor_costs
-        df['equipment_cost'] = equipment_costs
-        df['time_duration'] = time_durations
-        
-        # 添加成本明细
-        df['area_type'] = [detail['area_type'] for detail in cost_details]
-        df['standard_distance'] = [detail['standard_distance'] for detail in cost_details]
-        df['basic_cost'] = [detail['basic_cost'] for detail in cost_details]
-        df['overtime_cost'] = [detail['overtime_cost'] for detail in cost_details]
-        df['over_km_cost'] = [detail['over_km_cost'] for detail in cost_details]
-        
-        # 添加现金清点详情
-        df['counting_type'] = [detail.get('counting_type', '') for detail in counting_details]
-        df['staff_count'] = [detail.get('staff_count', 0) for detail in counting_details]
-        df['has_machine'] = [detail.get('has_machine', False) for detail in counting_details]
-        
-        # 基于市场场景和时段权重动态调整成本
-        df['scenario_multiplier'] = df['market_scenario'].map({
-            '正常': 1.0, '高需求期': 1.1, '紧急状况': 1.5, '节假日': 1.5
-        })
-        df['total_cost'] = (df['vehicle_cost'] + df['distance_km'] * 2.5) * df['scenario_multiplier'] * df['time_weight']
-        df['cost_per_km'] = df['total_cost'] / df['distance_km']
-        
-        return df
+
+    df['vehicle_cost'] = vehicle_costs
+    df['labor_cost'] = labor_costs
+    df['equipment_cost'] = equipment_costs
+    df['time_duration'] = time_durations
+    df['area_type'] = [detail['area_type'] for detail in cost_details]
+    df['standard_distance'] = [detail['standard_distance'] for detail in cost_details]
+    df['basic_cost'] = [detail['basic_cost'] for detail in cost_details]
+    df['overtime_cost'] = [detail['overtime_cost'] for detail in cost_details]
+    df['over_km_cost'] = [detail['over_km_cost'] for detail in cost_details]
+    df['counting_type'] = [detail.get('counting_type', '') for detail in counting_details]
+    df['staff_count'] = [detail.get('staff_count', 0) for detail in counting_details]
+    df['has_machine'] = [detail.get('has_machine', False) for detail in counting_details]
+    df['scenario_multiplier'] = df['market_scenario'].map({
+        '正常': 1.0, '高需求期': 1.1, '紧急状况': 1.5, '节假日': 1.5
+    })
+    df['total_cost'] = (df['vehicle_cost'] + df['distance_km'] * 2.5) * df['scenario_multiplier'] * df['time_weight']
+    df['cost_per_km'] = df['total_cost'] / df['distance_km']
+
+    return df
 
 # 添加历史数据生成函数
 @st.cache_data(ttl=300)  # 缓存5分钟
@@ -1350,18 +1264,6 @@ with col2:
 with col3:
     if st.button("⚙️ 系统设置", type="secondary", use_container_width=True):
         st.info("🔧 系统设置功能开发中...")
-
-# 页脚信息 - 白底主题
-st.markdown("---")
-st.markdown("""
-<div style='text-align: center; padding: 20px; color: #495057; border: 1px solid #007bff; border-radius: 10px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); box-shadow: 0 4px 12px rgba(0, 123, 255, 0.1);'>
-    <h4 style='color: #007bff; margin-bottom: 15px;'>🚀 动态成本管理看板系统 v3.0</h4>
-    <p><strong style='color: #007bff;'>✨ 核心功能:</strong> 动态可视化监控 | 成本分摊优化 | 市场冲击分析 | 异常检测预警</p>
-    <p><strong style='color: #28a745;'>📊 业务覆盖:</strong> 金库运送(50%) | 上门收款(25%) | 现金清点(18.75%) | 金库调拨(6.25%)</p>
-    <p><strong style='color: #17a2b8;'>🎯 智能特性:</strong> 7-10天历史分析 | 实时预警系统 | 多维度成本优化 | 异常特征识别</p>
-    <p style='color: #6c757d;'>💻 基于 Streamlit + Plotly 构建 | 🔄 实时数据更新 | 📱 响应式设计</p>
-</div>
-""", unsafe_allow_html=True)
 
 # 自动刷新（可选）
 # time.sleep(60)  # 60秒后自动刷新
