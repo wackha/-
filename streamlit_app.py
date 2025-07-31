@@ -326,7 +326,6 @@ def calculate_vault_transfer_cost():
         'distance_km': 15.0,
         'standard_distance': 15,
         'area_type': '专线',
-        'labor_cost': np.random.uniform(400, 600),
         'amount': np.random.uniform(5000000, 20000000)  # 仅用于展示，不参与成本
     }
 
@@ -491,7 +490,6 @@ def generate_sample_data():
             vehicle_cost, cost_detail = calculate_vehicle_cost(
                 row['distance_km'], 
                 time_hours, 
-                business_type,
                 row['region']
             )
             
@@ -500,12 +498,6 @@ def generate_sample_data():
             time_durations.append(row['time_duration'])
             counting_details.append({})  # 空的清点详情
             cost_details.append(cost_detail)
-            
-            # 人工成本（根据业务类型调整）
-            if business_type == '上门收款':
-                labor_costs.append(np.random.uniform(200, 350))
-            else:  # 金库运送
-                labor_costs.append(np.random.uniform(150, 250))
     
     # 更新DataFrame
     df['vehicle_cost'] = vehicle_costs
@@ -527,9 +519,9 @@ def generate_sample_data():
     
     # 基于市场场景和时段权重动态调整成本
     df['scenario_multiplier'] = df['market_scenario'].map({
-        '正常': 1.0, '高需求期': 1.3, '紧急状况': 1.8, '节假日': 1.5
+        '正常': 1.0, '高需求期': 1.1, '紧急状况': 1.5, '节假日': 1.5
     })
-    df['total_cost'] = (df['vehicle_cost'] + df['labor_cost'] + df['distance_km'] * 2.5) * df['scenario_multiplier'] * df['time_weight']
+    df['total_cost'] = (df['vehicle_cost'] + df['distance_km'] * 2.5) * df['scenario_multiplier'] * df['time_weight']
     df['cost_per_km'] = df['total_cost'] / df['distance_km']
     
     return df
@@ -567,9 +559,9 @@ def analyze_cost_optimization(df):
         'cost_reduction_estimate': 0.08 + np.random.uniform(0, 0.17),
         'time_weights': {
             '早班(6-14)': 1.0, 
-            '中班(14-22)': 1.1, 
+            '中班(14-22)': 1.0, 
             '晚班(22-6)': 1.3, 
-            '节假日': 1.6
+            '节假日': 1.5
         }
     }
     return optimization_data
