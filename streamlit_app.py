@@ -225,10 +225,43 @@ def generate_sample_data():
     
     # 特殊处理金库调拨的距离和成本
     vault_transfer_mask = df['business_type'] == '金库调拨'
-    df.loc[vault_transfer_mask, 'distance_km'] = np.random.uniform(25, 35, vault_transfer_mask.sum())  # 浦东到浦西固定距离
-    df.loc[vault_transfer_mask, 'amount'] = np.random.uniform(5000000, 20000000, vault_transfer_mask.sum())  # 大额调拨
-    df.loc[vault_transfer_mask, 'vehicle_cost'] = np.random.uniform(800, 1200, vault_transfer_mask.sum())  # 专用运钞车成本高
-    df.loc[vault_transfer_mask, 'labor_cost'] = np.random.uniform(600, 900, vault_transfer_mask.sum())  # 多人护送
+    
+    # 金库调拨固定距离15km
+    df.loc[vault_transfer_mask, 'distance_km'] = 15.0
+    
+    # 运钞车成本计算：75000元/月 ÷ 30天 ÷ 8小时 = 312.5元/小时
+    hourly_cost = 75000 / 30 / 8  # 312.5元/小时
+    
+    # 金库调拨成本构成
+    vault_count = vault_transfer_mask.sum()
+    if vault_count > 0:
+        # 基础运行时间（假设1-2小时）
+        base_hours = np.random.uniform(1, 2, vault_count)
+        
+        # 超时情况（10%概率超时0.5-1.5小时）
+        overtime_hours = np.where(
+            np.random.random(vault_count) < 0.1,  # 10%概率超时
+            np.random.uniform(0.5, 1.5, vault_count),
+            0
+        )
+        
+        # 超公里情况（5%概率超出1-3公里）
+        over_km = np.where(
+            np.random.random(vault_count) < 0.05,  # 5%概率超公里
+            np.random.uniform(1, 3, vault_count),
+            0
+        )
+        
+        # 计算总成本
+        basic_cost = base_hours * hourly_cost  # 基础成本
+        overtime_cost = overtime_hours * 300   # 超时费用
+        over_km_cost = over_km * 12           # 超公里费用
+    
+    df.loc[vault_transfer_mask, 'vehicle_cost'] = basic_cost + overtime_cost + over_km_cost
+    df.loc[vault_transfer_mask, 'labor_cost'] = np.random.uniform(200, 400, vault_count)  # 人工成本
+    df.loc[vault_transfer_mask, 'amount'] = np.random.uniform(5000000, 20000000, vault_count)  # 调拨金额
+    df.loc[vault_transfer_mask, 'time_duration'] = (base_hours + overtime_hours) * 60  # 转换为分钟
+    
     # 基于市场场景和时段权重动态调整成本
     df['scenario_multiplier'] = df['market_scenario'].map({
         '正常': 1.0, '高需求期': 1.3, '紧急状况': 1.8, '节假日': 1.5
