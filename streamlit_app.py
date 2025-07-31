@@ -173,6 +173,125 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+def get_shanghai_area_classification():
+    """上海区域分类：市区、近郊、远郊"""
+    return {
+        # 市区（网点密集，标准公里数较少）
+        '市区': {
+            'regions': ['黄浦区', '徐汇区', '长宁区', '静安区', '普陀区', '虹口区', '杨浦区'],
+            'standard_km': {
+                '金库运送': 8,     # 市区金库运送标准8公里
+                '上门收款': 10,    # 市区上门收款标准10公里
+                '现金清点': 0      # 现金清点无距离费用
+            }
+        },
+        # 近郊（网点适中，标准公里数适中）
+        '近郊': {
+            'regions': ['闵行区', '宝山区', '嘉定区', '浦东新区'],
+            'standard_km': {
+                '金库运送': 25,    # 近郊金库运送标准25公里
+                '上门收款': 28,    # 近郊上门收款标准28公里
+                '现金清点': 0      # 现金清点无距离费用
+            }
+        },
+        # 远郊（网点稀少，标准公里数较多）
+        '远郊': {
+            'regions': ['金山区', '松江区', '青浦区', '奉贤区', '崇明区'],
+            'standard_km': {
+                '金库运送': 45,    # 远郊金库运送标准45公里
+                '上门收款': 50,    # 远郊上门收款标准50公里
+                '现金清点': 0      # 现金清点无距离费用
+            }
+        }
+    }
+
+def get_area_type(region):
+    """根据区域获取地区类型"""
+    area_classification = get_shanghai_area_classification()
+    for area_type, config in area_classification.items():
+        if region in config['regions']:
+            return area_type
+    return '近郊'  # 默认返回近郊
+
+def calculate_vehicle_cost(distance_km, time_hours, business_type, region):
+    """
+    统一运钞车成本计算函数（根据市区/郊区调整标准公里数）
+    适用于：金库运送、上门收款
+    注意：金库调拨有单独的固定成本计算
+    """
+    # 基础成本：312.5元/小时
+    hourly_cost = 75000 / 30 / 8  # 312.5元/小时
+    
+    # 基础运行成本
+    basic_cost = time_hours * hourly_cost
+    
+    # 超时费用计算（不同业务类型有不同的标准时间）
+    standard_time = {
+        '金库运送': distance_km * 0.08 + 0.5,  # 市区运送标准时间
+        '上门收款': distance_km * 0.1 + 0.8,   # 上门收款需要更多时间
+    }
+    
+    overtime_hours = max(0, time_hours - standard_time.get(business_type, 1.0))
+    overtime_cost = overtime_hours * 300  # 超时费300元/小时
+    
+    # 超公里费用计算（只对有距离的业务计算）
+    over_km_cost = 0
+    if business_type in ['金库运送', '上门收款']:
+        # 根据区域类型获取标准公里数
+        area_type = get_area_type(region)
+        area_classification = get_shanghai_area_classification()
+        standard_distance = area_classification[area_type]['standard_km'].get(business_type, 15)
+        
+        # 超公里费用计算
+        over_km = max(0, distance_km - standard_distance)
+        over_km_cost = over_km * 12  # 超公里费12元/公里
+    
+    return basic_cost + overtime_cost + over_km_cost, {
+        'basic_cost': basic_cost,
+        'overtime_cost': overtime_cost,
+        'over_km_cost': over_km_cost,
+        'standard_distance': standard_distance if business_type in ['金库运送', '上门收款'] else 0,
+        'area_type': get_area_type(region) if business_type in ['金库运送', '上门收款'] else '市区'
+    }
+
+def calculate_vault_transfer_cost():
+    """
+    金库调拨专用成本计算函数
+    浦东金库 → 浦西金库，固定15公里路线
+    """
+    # 基础成本：312.5元/小时
+    hourly_cost = 75000 / 30 / 8  # 312.5元/小时
+    
+    # 基础运行时间（1-2小时）
+    base_hours = np.random.uniform(1, 2)
+    
+    # 超时情况（10%概率超时0.5-1.5小时）
+    overtime_hours = np.random.uniform(0.5, 1.5) if np.random.random() < 0.1 else 0
+    
+    # 超公里情况（5%概率超出1-3公里）
+    over_km = np.random.uniform(1, 3) if np.random.random() < 0.05 else 0
+    
+    # 计算成本构成
+    basic_cost = base_hours * hourly_cost      # 基础成本
+    overtime_cost = overtime_hours * 300       # 超时费用
+    over_km_cost = over_km * 12               # 超公里费用
+    
+    total_vehicle_cost = basic_cost + overtime_cost + over_km_cost
+    total_time = (base_hours + overtime_hours) * 60  # 转换为分钟
+    
+    return {
+        'vehicle_cost': total_vehicle_cost,
+        'time_duration': total_time,
+        'basic_cost': basic_cost,
+        'overtime_cost': overtime_cost,
+        'over_km_cost': over_km_cost,
+        'distance_km': 15.0,  # 固定15公里
+        'standard_distance': 15,  # 金库调拨标准公里数
+        'area_type': '专线',  # 专线标识
+        'labor_cost': np.random.uniform(400, 600),  # 高安全等级人工成本
+        'amount': np.random.uniform(5000000, 20000000)  # 调拨金额
+    }
+
 # 数据生成函数
 @st.cache_data(ttl=60)  # 缓存1分钟
 def generate_sample_data():
