@@ -353,45 +353,8 @@ def calculate_vault_transfer_cost():
         'standard_distance': 15,  # 金库调拨标准公里数
         'area_type': '专线',  # 专线标识
         'labor_cost': np.random.uniform(400, 600),  # 高安全等级人工成本
-        # 生成金额数据，确保现金清点业务有合理的大笔小笔分布
-        amount_list = []
-        for i in range(n_records):
-            if business_type_list[i] == '现金清点':
-                # 现金清点：30%概率为大笔(100万以上)，70%概率为小笔
-                if np.random.random() < 0.3:
-                    # 大笔业务：100万-1000万
-                    amount = np.random.uniform(1000000, 10000000)
-                else:
-                    # 小笔业务：1万-80万
-                    amount = np.random.uniform(10000, 800000)
-                amount_list.append(amount)
-            elif business_type_list[i] == '金库调拨':
-                # 金库调拨：500万-2000万
-                amount_list.append(np.random.uniform(5000000, 20000000))
-            else:
-                # 其他业务：指数分布
-                amount_list.append(np.random.exponential(50000))
-        
-        data = {
-            'txn_id': [f'TXN{i:06d}' for i in range(n_records)],
-            'business_type': business_type_list,
-            'region': region_list,
-            'amount': amount_list,  # 使用新的金额生成逻辑
-            'distance_km': np.random.gamma(2, 5, n_records),
-            'time_duration': np.random.gamma(3, 20, n_records),
-            'vehicle_cost': np.random.normal(200, 50, n_records),
-            'labor_cost': np.random.normal(150, 30, n_records),
-            'efficiency_ratio': np.random.beta(3, 2, n_records),
-            'start_time': pd.date_range(start=datetime.now() - timedelta(hours=24), 
-                                       periods=n_records, freq='5min'),
-            'is_anomaly': np.random.choice([True, False], n_records, p=[0.1, 0.9]),
-            # 新增字段：市场冲击场景
-            'market_scenario': np.random.choice(['正常', '高需求期', '紧急状况', '节假日'], 
-                                              n_records, p=[0.6, 0.2, 0.1, 0.1]),
-            # 动态时段权重
-            'time_weight': np.random.choice([1.0, 1.1, 1.3, 1.6], n_records, p=[0.4, 0.3, 0.2, 0.1])
-        }
-            }
+        'amount': np.random.uniform(5000000, 20000000)  # 调拨金额
+    }
 
 # 数据生成函数
 @st.cache_data(ttl=60)  # 缓存1分钟
@@ -421,11 +384,30 @@ def generate_sample_data():
             # 其他业务类型随机选择区域
             region_list.append(np.random.choice(regions))
     
+    # 生成金额数据，确保现金清点业务有合理的大笔小笔分布
+    amount_list = []
+    for i in range(n_records):
+        if business_type_list[i] == '现金清点':
+            # 现金清点：30%概率为大笔(100万以上)，70%概率为小笔
+            if np.random.random() < 0.3:
+                # 大笔业务：100万-1000万
+                amount = np.random.uniform(1000000, 10000000)
+            else:
+                # 小笔业务：1万-80万
+                amount = np.random.uniform(10000, 800000)
+            amount_list.append(amount)
+        elif business_type_list[i] == '金库调拨':
+            # 金库调拨：500万-2000万
+            amount_list.append(np.random.uniform(5000000, 20000000))
+        else:
+            # 其他业务：指数分布
+            amount_list.append(np.random.exponential(50000))
+    
     data = {
         'txn_id': [f'TXN{i:06d}' for i in range(n_records)],
         'business_type': business_type_list,
         'region': region_list,
-        'amount': np.random.exponential(50000, n_records),
+        'amount': amount_list,  # 使用新的金额生成逻辑
         'distance_km': np.random.gamma(2, 5, n_records),
         'time_duration': np.random.gamma(3, 20, n_records),
         'vehicle_cost': np.random.normal(200, 50, n_records),
