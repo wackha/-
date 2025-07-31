@@ -733,30 +733,30 @@ if len(vault_data) > 0:
         st.metric("调拨总成本", f"¥{vault_data['total_cost'].sum():.0f}")
         st.metric("平均车辆成本", f"¥{vault_data['vehicle_cost'].mean():.0f}")
     
-# 显示成本构成详情
-st.markdown("#### 💰 运钞车成本构成分析")
-col_c1, col_c2, col_c3, col_c4 = st.columns(4)
-
-with col_c1:
-    hourly_rate = 75000 / 30 / 8
-    st.metric("基础时成本", f"¥{hourly_rate:.1f}/小时")
-    st.caption("75000元/月 ÷ 30天 ÷ 8小时")
-
-with col_c2:
-    st.metric("超时费率", "¥300/小时")
-    overtime_total = vault_data['overtime_cost'].sum() if 'overtime_cost' in vault_data.columns else 0
-    st.caption(f"本批次超时费：¥{overtime_total:.0f}")
-
-with col_c3:
-    st.metric("超公里费率", "¥12/公里")
-    over_km_total = vault_data['over_km_cost'].sum() if 'over_km_cost' in vault_data.columns else 0
-    st.caption(f"本批次超公里费：¥{over_km_total:.0f}")
-
-with col_c4:
-    st.metric("标准公里数", "15km")
-    st.caption("金库调拨统一标准")
-
-st.info("🚗 金库调拨业务：浦东新区 → 黄浦区，固定15km路线，统一标准公里数")
+    # 显示成本构成详情
+    st.markdown("#### 💰 运钞车成本构成分析")
+    col_c1, col_c2, col_c3, col_c4 = st.columns(4)
+    
+    with col_c1:
+        hourly_rate = 75000 / 30 / 8
+        st.metric("基础时成本", f"¥{hourly_rate:.1f}/小时")
+        st.caption("75000元/月 ÷ 30天 ÷ 8小时")
+    
+    with col_c2:
+        st.metric("超时费率", "¥300/小时")
+        overtime_total = vault_data['overtime_cost'].sum() if 'overtime_cost' in vault_data.columns else 0
+        st.caption(f"本批次超时费：¥{overtime_total:.0f}")
+    
+    with col_c3:
+        st.metric("超公里费率", "¥12/公里")
+        over_km_total = vault_data['over_km_cost'].sum() if 'over_km_cost' in vault_data.columns else 0
+        st.caption(f"本批次超公里费：¥{over_km_total:.0f}")
+    
+    with col_c4:
+        st.metric("标准公里数", "15km")
+        st.caption("金库调拨统一标准")
+    
+    st.info("🚗 金库调拨业务：浦东新区 → 黄浦区，固定15km路线，统一标准公里数")
 else:
     st.warning("当前时段无金库调拨业务")
 
