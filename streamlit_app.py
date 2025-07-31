@@ -432,12 +432,14 @@ high_cost_businesses = df[df['total_cost'] > high_cost_threshold]
 
 if len(high_cost_businesses) > 0:
     st.markdown(f'<div class="big-font" style="color: #dc3545; padding: 15px; background: #f8d7da; border-radius: 10px; margin: 15px 0;">⚠️ 发现 {len(high_cost_businesses)} 笔高成本业务需要关注</div>', unsafe_allow_html=True)
-    st.dataframe(high_cost_businesses[['txn_id', 'business_type', 'region', 'total_cost', 'market_scenario']], 
-                use_container_width=True)
+    
+    # 格式化显示数据，total_cost保留到个位数
+    display_data = high_cost_businesses[['txn_id', 'business_type', 'region', 'total_cost', 'market_scenario']].copy()
+    display_data['total_cost'] = display_data['total_cost'].round(0).astype(int)  # 保留到个位数
+    
+    st.dataframe(display_data, use_container_width=True)
 else:
     st.markdown('<div class="big-font" style="color: #28a745; padding: 15px; background: #d4edda; border-radius: 10px; margin: 15px 0;">✅ 当前所有业务成本均在正常范围内</div>', unsafe_allow_html=True)
-
-st.success("🔬 深度分析完成！")
 
 # 深度数据分析模块
 st.markdown("---")
@@ -462,43 +464,42 @@ with col_d3:
     st.metric("成本效率比", f"{cost_efficiency.mean():.0f}")
 st.markdown('</div>', unsafe_allow_html=True)
 
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown('<h3 class="huge-font">📊 金库调拨专项分析</h3>', unsafe_allow_html=True)
-    vault_data = df[df['business_type'] == '金库调拨']
-    if len(vault_data) > 0:
-        col_v1, col_v2, col_v3 = st.columns(3)
-        with col_v1:
-            st.markdown('<div class="big-font">📦 调拨数量</div>', unsafe_allow_html=True)
-            st.metric("调拨业务数量", len(vault_data))
-            st.metric("平均调拨金额", f"¥{vault_data['amount'].mean():,.0f}")
-        with col_v2:
-            st.markdown('<div class="big-font">🚛 运输指标</div>', unsafe_allow_html=True)
-            st.metric("平均距离", f"{vault_data['distance_km'].mean():.1f}km")
-            st.metric("平均时长", f"{vault_data['time_duration'].mean():.1f}分钟")
-        with col_v3:
-            st.markdown('<div class="big-font">💰 成本分析</div>', unsafe_allow_html=True)
-            st.metric("调拨总成本", f"¥{vault_data['total_cost'].sum():,.0f}")
-            st.metric("单公里成本", f"¥{(vault_data['total_cost']/vault_data['distance_km']).mean():.0f}")
-        
-        st.markdown('<div class="big-font" style="text-align: center; padding: 15px; background: #e3f2fd; border-radius: 10px; margin: 15px 0;">🏦 金库调拨业务：浦东金库 → 浦西金库，固定路线，高安全等级</div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="big-font" style="text-align: center; padding: 15px; background: #fff3cd; border-radius: 10px; margin: 15px 0;">⚠️ 当前时段无金库调拨业务</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with col2:
-    st.markdown('<h3 class="huge-font">🚨 风险预警分析</h3>', unsafe_allow_html=True)
-    high_cost_threshold = df['total_cost'].quantile(0.9)
-    high_cost_businesses = df[df['total_cost'] > high_cost_threshold]
+st.markdown('<h3 class="huge-font">📊 金库调拨专项分析</h3>', unsafe_allow_html=True)
+vault_data = df[df['business_type'] == '金库调拨']
+if len(vault_data) > 0:
+    col_v1, col_v2, col_v3 = st.columns(3)
+    with col_v1:
+        st.metric("调拨业务数量", len(vault_data))
+        st.metric("平均调拨金额", f"¥{vault_data['amount'].mean():,.0f}")
+    with col_v2:
+        st.metric("固定距离", "15.0km")  # 显示固定距离
+        st.metric("平均运输时长", f"{vault_data['time_duration'].mean():.1f}分钟")
+    with col_v3:
+        st.metric("调拨总成本", f"¥{vault_data['total_cost'].sum():.0f}")  # 保留到个位数
+        st.metric("单次平均成本", f"¥{vault_data['total_cost'].mean():.0f}")  # 保留到个位数
     
-    if len(high_cost_businesses) > 0:
-        st.markdown(f'<div class="big-font" style="color: #dc3545; padding: 15px; background: #f8d7da; border-radius: 10px; margin: 15px 0;">⚠️ 发现 {len(high_cost_businesses)} 笔高成本业务需要关注</div>', unsafe_allow_html=True)
-        st.dataframe(high_cost_businesses[['txn_id', 'business_type', 'region', 'total_cost', 'market_scenario']], 
-                   use_container_width=True)
-    else:
-        st.markdown('<div class="big-font" style="color: #28a745; padding: 15px; background: #d4edda; border-radius: 10px; margin: 15px 0;">✅ 当前所有业务成本均在正常范围内</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    # 显示成本构成详情
+    st.markdown("#### 💰 成本构成分析")
+    col_c1, col_c2, col_c3 = st.columns(3)
+    
+    with col_c1:
+        avg_vehicle_cost = vault_data['vehicle_cost'].mean()
+        st.metric("平均车辆成本", f"¥{avg_vehicle_cost:.0f}")
+        st.caption("包含基础运行费用、超时费、超公里费")
+    
+    with col_c2:
+        avg_labor_cost = vault_data['labor_cost'].mean()
+        st.metric("平均人工成本", f"¥{avg_labor_cost:.0f}")
+        st.caption("押运人员工资及补贴")
+    
+    with col_c3:
+        hourly_rate = 75000 / 30 / 8
+        st.metric("车辆时成本", f"¥{hourly_rate:.1f}/小时")
+        st.caption("运钞车月成本分摊")
+    
+    st.info("🚗 金库调拨业务：浦东新区 → 黄浦区，固定15km路线，专用运钞车")
+else:
+    st.warning("当前时段无金库调拨业务")
 
 # 市场冲击模拟与预警
 st.markdown("---")
