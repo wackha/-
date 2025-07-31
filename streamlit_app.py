@@ -275,41 +275,27 @@ def calculate_cash_counting_cost(amount):
             'processing_hours': processing_hours
         }
 
+# ...existing code...
 def calculate_vehicle_cost(distance_km, time_hours, business_type, region):
     """
-    统一运钞车成本计算函数（根据市区/郊区调整标准公里数）
-    适用于：金库运送、上门收款
-    注意：现金清点和金库调拨有单独的成本计算
+    统一运钞车成本计算函数（与金额无关）
     """
-    # 基础成本：312.5元/小时
     hourly_cost = 75000 / 30 / 8  # 312.5元/小时
-    
-    # 基础运行成本
     basic_cost = time_hours * hourly_cost
-    
-    # 超时费用计算（不同业务类型有不同的标准时间）
     standard_time = {
-        '金库运送': distance_km * 0.08 + 0.5,  # 市区运送标准时间
-        '上门收款': distance_km * 0.1 + 0.8,   # 上门收款需要更多时间
+        '金库运送': distance_km * 0.08 + 0.5,
+        '上门收款': distance_km * 0.1 + 0.8,
     }
-    
     overtime_hours = max(0, time_hours - standard_time.get(business_type, 1.0))
-    overtime_cost = overtime_hours * 300  # 超时费300元/小时
-    
-    # 超公里费用计算（只对有距离的业务计算）
+    overtime_cost = overtime_hours * 300
     over_km_cost = 0
     standard_distance = 0
-    
     if business_type in ['金库运送', '上门收款']:
-        # 根据区域类型获取标准公里数
         area_type = get_area_type(region)
         area_classification = get_shanghai_area_classification()
         standard_distance = area_classification[area_type]['standard_km'].get(business_type, 15)
-        
-        # 超公里费用计算
         over_km = max(0, distance_km - standard_distance)
-        over_km_cost = over_km * 12  # 超公里费12元/公里
-    
+        over_km_cost = over_km * 12
     return basic_cost + overtime_cost + over_km_cost, {
         'basic_cost': basic_cost,
         'overtime_cost': overtime_cost,
@@ -320,40 +306,28 @@ def calculate_vehicle_cost(distance_km, time_hours, business_type, region):
 
 def calculate_vault_transfer_cost():
     """
-    金库调拨专用成本计算函数
-    浦东金库 → 黄浦区，固定15公里路线
+    金库调拨专用成本计算函数（与金额无关）
     """
-    # 基础成本：312.5元/小时
-    hourly_cost = 75000 / 30 / 8  # 312.5元/小时
-    
-    # 基础运行时间（1-2小时）
+    hourly_cost = 75000 / 30 / 8
     base_hours = np.random.uniform(1, 2)
-    
-    # 超时情况（10%概率超时0.5-1.5小时）
     overtime_hours = np.random.uniform(0.5, 1.5) if np.random.random() < 0.1 else 0
-    
-    # 超公里情况（5%概率超出1-3公里）
     over_km = np.random.uniform(1, 3) if np.random.random() < 0.05 else 0
-    
-    # 计算成本构成
-    basic_cost = base_hours * hourly_cost      # 基础成本
-    overtime_cost = overtime_hours * 300       # 超时费用
-    over_km_cost = over_km * 12               # 超公里费用
-    
+    basic_cost = base_hours * hourly_cost
+    overtime_cost = overtime_hours * 300
+    over_km_cost = over_km * 12
     total_vehicle_cost = basic_cost + overtime_cost + over_km_cost
-    total_time = (base_hours + overtime_hours) * 60  # 转换为分钟
-    
+    total_time = (base_hours + overtime_hours) * 60
     return {
         'vehicle_cost': total_vehicle_cost,
         'time_duration': total_time,
         'basic_cost': basic_cost,
         'overtime_cost': overtime_cost,
         'over_km_cost': over_km_cost,
-        'distance_km': 15.0,  # 固定15公里
-        'standard_distance': 15,  # 金库调拨标准公里数
-        'area_type': '专线',  # 专线标识
-        'labor_cost': np.random.uniform(400, 600),  # 高安全等级人工成本
-        'amount': np.random.uniform(5000000, 20000000)  # 调拨金额
+        'distance_km': 15.0,
+        'standard_distance': 15,
+        'area_type': '专线',
+        'labor_cost': np.random.uniform(400, 600),
+        'amount': np.random.uniform(5000000, 20000000)  # 仅用于展示，不参与成本
     }
 
 # 数据生成函数
@@ -390,18 +364,16 @@ def generate_sample_data():
         if business_type_list[i] == '现金清点':
             # 现金清点：30%概率为大笔(100万以上)，70%概率为小笔
             if np.random.random() < 0.3:
-                # 大笔业务：100万-1000万
                 amount = np.random.uniform(1000000, 10000000)
             else:
-                # 小笔业务：1万-80万
                 amount = np.random.uniform(10000, 800000)
             amount_list.append(amount)
         elif business_type_list[i] == '金库调拨':
-            # 金库调拨：500万-2000万
+            # 金库调拨金额可以保留，但后续成本计算不再用到
             amount_list.append(np.random.uniform(5000000, 20000000))
         else:
-            # 其他业务：指数分布
-            amount_list.append(np.random.exponential(50000))
+            # 金库运送、上门收款金额随机，但不影响成本
+            amount_list.append(np.random.uniform(10000, 1000000))
     
     data = {
         'txn_id': [f'TXN{i:06d}' for i in range(n_records)],
