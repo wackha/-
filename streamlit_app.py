@@ -275,33 +275,30 @@ def calculate_cash_counting_cost(amount):
             'processing_hours': processing_hours
         }
 
-# ...existing code...
 def calculate_vehicle_cost(distance_km, time_hours, region):
     """
-    统一运钞车成本计算函数（与金额无关）
+    统一运钞车成本计算函数（与业务类型和金额无关，仅与距离、时长、区域有关）
     """
     hourly_cost = 75000 / 30 / 8  # 312.5元/小时
     basic_cost = time_hours * hourly_cost
-    standard_time = {
-        '金库运送': distance_km * 0.08 + 0.5,
-        '上门收款': distance_km * 0.1 + 0.8,
-    }
-    overtime_hours = max(0, time_hours - standard_time.get(business_type, 1.0))
+
+    # 统一标准时间和标准公里数（可根据实际需要调整，这里用市区金库运送标准）
+    area_type = get_area_type(region)
+    area_classification = get_shanghai_area_classification()
+    standard_distance = area_classification[area_type]['standard_km'].get('金库运送', 15)
+    standard_time = distance_km * 0.08 + 0.5
+
+    overtime_hours = max(0, time_hours - standard_time)
     overtime_cost = overtime_hours * 300
-    over_km_cost = 0
-    standard_distance = 0
-    if business_type in ['金库运送', '上门收款']:
-        area_type = get_area_type(region)
-        area_classification = get_shanghai_area_classification()
-        standard_distance = area_classification[area_type]['standard_km'].get(business_type, 15)
-        over_km = max(0, distance_km - standard_distance)
-        over_km_cost = over_km * 12
+    over_km = max(0, distance_km - standard_distance)
+    over_km_cost = over_km * 12
+
     return basic_cost + overtime_cost + over_km_cost, {
         'basic_cost': basic_cost,
         'overtime_cost': overtime_cost,
         'over_km_cost': over_km_cost,
         'standard_distance': standard_distance,
-        'area_type': get_area_type(region) if business_type in ['金库运送', '上门收款'] else '无'
+        'area_type': area_type
     }
 
 def calculate_vault_transfer_cost():
