@@ -830,9 +830,12 @@ high_cost_businesses = df[df['total_cost'] > high_cost_threshold]
 if len(high_cost_businesses) > 0:
     st.markdown(f'<div class="big-font" style="color: #dc3545; padding: 15px; background: #f8d7da; border-radius: 10px; margin: 15px 0;">⚠️ 发现 {len(high_cost_businesses)} 笔高成本业务需要关注</div>', unsafe_allow_html=True)
     
-    # 格式化显示数据，total_cost保留到个位数
-    display_data = high_cost_businesses[['txn_id', 'business_type', 'region', 'total_cost', 'market_scenario']].copy()
-    display_data['total_cost'] = display_data['total_cost'].round(0).astype(int)  # 保留到个位数
+    # 格式化显示数据，所有数值精确到个位数
+    display_data = high_cost_businesses[['txn_id', 'business_type', 'region', 'total_cost', 'market_scenario', 'amount', 'distance_km', 'time_duration']].copy()
+    display_data['total_cost'] = display_data['total_cost'].round(0).astype(int)
+    display_data['amount'] = display_data['amount'].round(0).astype(int)  
+    display_data['distance_km'] = display_data['distance_km'].round(0).astype(int)
+    display_data['time_duration'] = display_data['time_duration'].round(0).astype(int)
     
     st.dataframe(display_data, use_container_width=True)
 else:
@@ -921,22 +924,23 @@ with col1:
     st.plotly_chart(fig_scenario, use_container_width=True)
 
 with col2:
-    st.markdown("### 🚨 实时预警状态")
+    st.write("### 🚨 风险预警分析")
+    high_cost_threshold = df['total_cost'].quantile(0.9)
+    high_cost_businesses = df[df['total_cost'] > high_cost_threshold]
     
-    # 预警等级计算
-    high_cost_rate = (df['total_cost'] > df['total_cost'].quantile(0.8)).mean()
-    emergency_rate = (df['market_scenario'] == '紧急状况').mean()
-    
-    if emergency_rate > 0.15:
-        st.error("🔴 高级预警：紧急状况频发")
-    elif high_cost_rate > 0.25:
-        st.warning("🟡 中级预警：成本异常偏高")
+    if len(high_cost_businesses) > 0:
+        st.markdown(f'<div class="big-font" style="color: #dc3545; padding: 15px; background: #f8d7da; border-radius: 10px; margin: 15px 0;">⚠️ 发现 {len(high_cost_businesses)} 笔高成本业务需要关注</div>', unsafe_allow_html=True)
+        
+        # 格式化显示数据，所有数值精确到个位数
+        display_data = high_cost_businesses[['txn_id', 'business_type', 'region', 'total_cost', 'market_scenario', 'amount', 'distance_km', 'time_duration']].copy()
+        display_data['total_cost'] = display_data['total_cost'].round(0).astype(int)
+        display_data['amount'] = display_data['amount'].round(0).astype(int)  
+        display_data['distance_km'] = display_data['distance_km'].round(0).astype(int)
+        display_data['time_duration'] = display_data['time_duration'].round(0).astype(int)
+        
+        st.dataframe(display_data, use_container_width=True)
     else:
-        st.success("🟢 正常状态：系统运行良好")
-    
-    st.metric("高成本业务占比", f"{high_cost_rate*100:.1f}%")
-    st.metric("紧急状况占比", f"{emergency_rate*100:.1f}%")
-    st.metric("平均响应时间", f"{df['time_duration'].mean():.1f}分钟")
+        st.markdown('<div class="big-font" style="color: #28a745; padding: 15px; background: #d4edda; border-radius: 10px; margin: 15px 0;">✅ 当前所有业务成本均在正常范围内</div>', unsafe_allow_html=True)
 
 # 第一行图表
 col1, col2 = st.columns(2)
@@ -1129,6 +1133,29 @@ with col2:
 st.markdown("---")
 st.subheader("📋 综合数据分析与异常检测")
 
+# 数据格式化函数
+def format_dataframe_for_display(df):
+    """格式化数据框用于显示，数值精确到个位数"""
+    display_df = df.copy()
+    
+    # 格式化数值列，精确到个位数
+    if 'amount' in display_df.columns:
+        display_df['amount'] = display_df['amount'].round(0).astype(int)
+    if 'total_cost' in display_df.columns:
+        display_df['total_cost'] = display_df['total_cost'].round(0).astype(int)
+    if 'distance_km' in display_df.columns:
+        display_df['distance_km'] = display_df['distance_km'].round(0).astype(int)
+    if 'time_duration' in display_df.columns:
+        display_df['time_duration'] = display_df['time_duration'].round(0).astype(int)
+    if 'vehicle_cost' in display_df.columns:
+        display_df['vehicle_cost'] = display_df['vehicle_cost'].round(0).astype(int)
+    if 'labor_cost' in display_df.columns:
+        display_df['labor_cost'] = display_df['labor_cost'].round(0).astype(int)
+    if 'equipment_cost' in display_df.columns:
+        display_df['equipment_cost'] = display_df['equipment_cost'].round(0).astype(int)
+    
+    return display_df
+
 # 数据分类标签页
 tab1, tab2, tab3 = st.tabs(["📊 正常业务数据", "⚠️ 异常业务数据", "🔍 异常特征分析"])
 
@@ -1154,25 +1181,44 @@ with tab1:
     if selected_scenario != '全部':
         filtered_normal = filtered_normal[filtered_normal['market_scenario'] == selected_scenario]
     
+    # 显示列定义
     display_columns = ['txn_id', 'business_type', 'region', 'market_scenario', 'amount', 
                       'total_cost', 'efficiency_ratio', 'distance_km', 'time_duration']
-    st.dataframe(filtered_normal[display_columns].head(20), use_container_width=True)
+    
+    # 格式化数据并显示
+    formatted_normal = format_dataframe_for_display(filtered_normal[display_columns])
+    st.dataframe(formatted_normal.head(20), use_container_width=True)
+    
+    # 统计信息（格式化到个位数）
+    col_s1, col_s2, col_s3, col_s4 = st.columns(4)
+    with col_s1:
+        st.metric("平均金额", f"¥{filtered_normal['amount'].mean():,.0f}")
+    with col_s2:
+        st.metric("平均成本", f"¥{filtered_normal['total_cost'].mean():,.0f}")
+    with col_s3:
+        st.metric("平均距离", f"{filtered_normal['distance_km'].mean():.0f}km")
+    with col_s4:
+        st.metric("平均时长", f"{filtered_normal['time_duration'].mean():.0f}分钟")
 
 with tab2:
     anomaly_data = df[df['is_anomaly'] == True]
     st.write(f"异常业务数据 ({len(anomaly_data)} 条记录)")
     
     if len(anomaly_data) > 0:
-        st.dataframe(anomaly_data[display_columns], use_container_width=True)
+        # 格式化异常数据并显示
+        formatted_anomaly = format_dataframe_for_display(anomaly_data[display_columns])
+        st.dataframe(formatted_anomaly, use_container_width=True)
         
-        # 异常数据统计
-        col1, col2, col3 = st.columns(3)
+        # 异常数据统计（格式化到个位数）
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("异常数据平均成本", f"¥{anomaly_data['total_cost'].mean():,.0f}")
         with col2:
             st.metric("异常数据最高成本", f"¥{anomaly_data['total_cost'].max():,.0f}")
         with col3:
-            st.metric("异常数据平均距离", f"{anomaly_data['distance_km'].mean():.1f}km")
+            st.metric("异常数据平均距离", f"{anomaly_data['distance_km'].mean():.0f}km")
+        with col4:
+            st.metric("异常数据平均时长", f"{anomaly_data['time_duration'].mean():.0f}分钟")
     else:
         st.info("当前没有检测到异常数据")
 
@@ -1183,17 +1229,20 @@ with tab3:
         col1, col2 = st.columns(2)
         
         with col1:
-            # 异常数据分布
+            # 异常数据成本分布（使用格式化后的数据）
             fig_anomaly_dist = px.histogram(
                 anomaly_data,
                 x='total_cost',
                 title="异常数据成本分布",
-                color_discrete_sequence=['#ff6b6b']
+                color_discrete_sequence=['#ff6b6b'],
+                nbins=20
             )
             fig_anomaly_dist.update_layout(
                 paper_bgcolor='white',
                 plot_bgcolor='white',
-                font_color='black'
+                font_color='black',
+                xaxis_title="总成本(元)",
+                yaxis_title="频次"
             )
             st.plotly_chart(fig_anomaly_dist, use_container_width=True)
         
@@ -1209,22 +1258,82 @@ with tab3:
             fig_anomaly_business.update_layout(
                 paper_bgcolor='white',
                 plot_bgcolor='white',
-                font_color='black'
+                font_color='black',
+                xaxis_title="业务类型",
+                yaxis_title="异常数量"
             )
             st.plotly_chart(fig_anomaly_business, use_container_width=True)
         
-        # 异常数据关键指标
+        # 异常数据关键指标（格式化到个位数）
         st.write("### 📊 异常数据关键指标统计")
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.metric("平均人工时长", f"{anomaly_data['time_duration'].mean():.1f}分钟")
+            st.metric("平均时长", f"{anomaly_data['time_duration'].mean():.0f}分钟")
         with col2:
-            st.metric("平均运输距离", f"{anomaly_data['distance_km'].mean():.1f}km")
+            st.metric("平均距离", f"{anomaly_data['distance_km'].mean():.0f}km")
         with col3:
             st.metric("平均效率比", f"{anomaly_data['efficiency_ratio'].mean():.3f}")
         with col4:
-            st.metric("异常率占比", f"{len(anomaly_data)/len(df)*100:.1f}%")
+            st.metric("异常率", f"{len(anomaly_data)/len(df)*100:.1f}%")
+        
+        # 异常数据详细特征分析
+        st.write("### 🎯 异常数据成本构成分析")
+        
+        # 创建异常数据的成本构成分析
+        if len(anomaly_data) > 0:
+            # 按业务类型分组的异常数据统计
+            anomaly_by_type = anomaly_data.groupby('business_type').agg({
+                'total_cost': ['mean', 'max', 'count'],
+                'distance_km': 'mean',
+                'time_duration': 'mean',
+                'amount': 'mean'
+            }).round(0)
+            
+            # 扁平化列名
+            anomaly_by_type.columns = ['平均成本', '最高成本', '异常数量', '平均距离', '平均时长', '平均金额']
+            anomaly_by_type = anomaly_by_type.astype(int)
+            
+            st.dataframe(anomaly_by_type, use_container_width=True)
+        
+        # 异常数据的分布特征
+        col_dist1, col_dist2 = st.columns(2)
+        
+        with col_dist1:
+            # 异常数据距离分布
+            fig_distance_dist = px.box(
+                anomaly_data,
+                y='distance_km',
+                x='business_type',
+                title="异常数据距离分布",
+                color_discrete_sequence=['#ff6b6b']
+            )
+            fig_distance_dist.update_layout(
+                paper_bgcolor='white',
+                plot_bgcolor='white',
+                font_color='black',
+                yaxis_title="距离(km)",
+                xaxis_title="业务类型"
+            )
+            st.plotly_chart(fig_distance_dist, use_container_width=True)
+        
+        with col_dist2:
+            # 异常数据时长分布
+            fig_time_dist = px.box(
+                anomaly_data,
+                y='time_duration',
+                x='business_type',
+                title="异常数据时长分布",
+                color_discrete_sequence=['#ff6b6b']
+            )
+            fig_time_dist.update_layout(
+                paper_bgcolor='white',
+                plot_bgcolor='white',
+                font_color='black',
+                yaxis_title="时长(分钟)",
+                xaxis_title="业务类型"
+            )
+            st.plotly_chart(fig_time_dist, use_container_width=True)
     else:
         st.info("当前没有异常数据用于分析")
 
