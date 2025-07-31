@@ -834,25 +834,6 @@ with col1:
     )
     st.plotly_chart(fig_scenario, use_container_width=True)
 
-with col2:
-    st.write("### 🚨 风险预警分析")
-    high_cost_threshold = df['total_cost'].quantile(0.9)
-    high_cost_businesses = df[df['total_cost'] > high_cost_threshold]
-    
-    if len(high_cost_businesses) > 0:
-        st.markdown(f'<div class="big-font" style="color: #dc3545; padding: 15px; background: #f8d7da; border-radius: 10px; margin: 15px 0;">⚠️ 发现 {len(high_cost_businesses)} 笔高成本业务需要关注</div>', unsafe_allow_html=True)
-        
-        # 格式化显示数据，所有数值精确到个位数
-        display_data = high_cost_businesses[['txn_id', 'business_type', 'region', 'total_cost', 'market_scenario', 'amount', 'distance_km', 'time_duration']].copy()
-        display_data['total_cost'] = display_data['total_cost'].round(0).astype(int)
-        display_data['amount'] = display_data['amount'].round(0).astype(int)  
-        display_data['distance_km'] = display_data['distance_km'].round(0).astype(int)
-        display_data['time_duration'] = display_data['time_duration'].round(0).astype(int)
-        
-        st.dataframe(display_data, use_container_width=True)
-    else:
-        st.markdown('<div class="big-font" style="color: #28a745; padding: 15px; background: #d4edda; border-radius: 10px; margin: 15px 0;">✅ 当前所有业务成本均在正常范围内</div>', unsafe_allow_html=True)
-
 # 第一行图表
 col1, col2 = st.columns(2)
 
