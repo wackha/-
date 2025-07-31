@@ -276,7 +276,7 @@ def calculate_cash_counting_cost(amount):
         }
 
 # ...existing code...
-def calculate_vehicle_cost(distance_km, time_hours, business_type, region):
+def calculate_vehicle_cost(distance_km, time_hours, region):
     """
     统一运钞车成本计算函数（与金额无关）
     """
