@@ -681,7 +681,7 @@ with col4:
 # 详细业务报告模块
 st.markdown("---")
 st.subheader("📊 详细业务报告与核心指标分析")
-            
+
 # 计算成本效率指标
 cost_efficiency = df['total_cost'] / df['efficiency_ratio']
 high_efficiency = df[df['efficiency_ratio'] > 0.7]
@@ -698,6 +698,7 @@ with col_d3:
     st.markdown('<div class="big-font">⚖️ 成本效率</div>', unsafe_allow_html=True)
     st.metric("成本效率比", f"{cost_efficiency.mean():.0f}")
 
+# 金库调拨专项分析
 st.markdown('<h3 class="huge-font">📊 金库调拨专项分析</h3>', unsafe_allow_html=True)
 vault_data = df[df['business_type'] == '金库调拨']
 if len(vault_data) > 0:
@@ -706,17 +707,40 @@ if len(vault_data) > 0:
         st.metric("调拨业务数量", len(vault_data))
         st.metric("平均调拨金额", f"¥{vault_data['amount'].mean():,.0f}")
     with col_v2:
-        st.metric("平均距离", f"{vault_data['distance_km'].mean():.1f}km")
-        st.metric("平均时长", f"{vault_data['time_duration'].mean():.1f}分钟")
+        st.metric("固定距离", "15.0km")
+        st.metric("平均运输时长", f"{vault_data['time_duration'].mean():.0f}分钟")
     with col_v3:
-        st.metric("调拨总成本", f"¥{vault_data['total_cost'].sum():,.0f}")
-        st.metric("单公里成本", f"¥{(vault_data['total_cost']/vault_data['distance_km']).mean():.0f}")
+        st.metric("调拨总成本", f"¥{vault_data['total_cost'].sum():.0f}")
+        st.metric("平均车辆成本", f"¥{vault_data['vehicle_cost'].mean():.0f}")
     
-    st.info("🚗 金库调拨业务：浦东新区 → 浦西，固定路线，高安全等级")
+    # 显示成本构成详情
+    st.markdown("#### 💰 运钞车成本构成分析")
+    col_c1, col_c2, col_c3, col_c4 = st.columns(4)
+    
+    with col_c1:
+        hourly_rate = 75000 / 30 / 8
+        st.metric("基础时成本", f"¥{hourly_rate:.1f}/小时")
+        st.caption("75000元/月 ÷ 30天 ÷ 8小时")
+    
+    with col_c2:
+        st.metric("超时费率", "¥300/小时")
+        overtime_total = vault_data['overtime_cost'].sum() if 'overtime_cost' in vault_data.columns else 0
+        st.caption(f"本批次超时费：¥{overtime_total:.0f}")
+    
+    with col_c3:
+        st.metric("超公里费率", "¥12/公里")
+        over_km_total = vault_data['over_km_cost'].sum() if 'over_km_cost' in vault_data.columns else 0
+        st.caption(f"本批次超公里费：¥{over_km_total:.0f}")
+    
+    with col_c4:
+        st.metric("标准公里数", "15km")
+        st.caption("金库调拨统一标准")
+    
+    st.info("🚗 金库调拨业务：浦东新区 → 黄浦区，固定15km路线，统一标准公里数")
 else:
     st.warning("当前时段无金库调拨业务")
-st.markdown('</div>', unsafe_allow_html=True)
 
+# 现金清点专项分析
 st.markdown('<h3 class="huge-font">💰 现金清点专项分析</h3>', unsafe_allow_html=True)
 counting_data = df[df['business_type'] == '现金清点']
 if len(counting_data) > 0:
@@ -766,7 +790,7 @@ if len(counting_data) > 0:
             st.metric("小笔清点人工成本", "¥0")
             st.caption("数据生成中...")
     
-    with col_cost4:
+    with col_c4:
         avg_efficiency = counting_data['efficiency_ratio'].mean() if len(counting_data) > 0 else 0
         st.metric("清点效率", f"{avg_efficiency:.3f}")
         st.caption("综合处理效率")
@@ -823,7 +847,8 @@ if len(counting_data) > 0:
 else:
     st.warning("当前时段无现金清点业务")
 
-st.write("### 🚨 风险预警分析")
+# 风险预警分析
+st.markdown('<h3 class="huge-font">🚨 风险预警分析</h3>', unsafe_allow_html=True)
 high_cost_threshold = df['total_cost'].quantile(0.9)
 high_cost_businesses = df[df['total_cost'] > high_cost_threshold]
 
@@ -838,68 +863,20 @@ if len(high_cost_businesses) > 0:
     display_data['time_duration'] = display_data['time_duration'].round(0).astype(int)
     
     st.dataframe(display_data, use_container_width=True)
+    
+    # 风险业务统计
+    col_risk1, col_risk2, col_risk3, col_risk4 = st.columns(4)
+    with col_risk1:
+        st.metric("高风险业务数", len(high_cost_businesses))
+    with col_risk2:
+        st.metric("平均风险成本", f"¥{high_cost_businesses['total_cost'].mean():.0f}")
+    with col_risk3:
+        st.metric("最高风险成本", f"¥{high_cost_businesses['total_cost'].max():.0f}")
+    with col_risk4:
+        risk_rate = len(high_cost_businesses) / len(df) * 100
+        st.metric("风险业务占比", f"{risk_rate:.1f}%")
 else:
     st.markdown('<div class="big-font" style="color: #28a745; padding: 15px; background: #d4edda; border-radius: 10px; margin: 15px 0;">✅ 当前所有业务成本均在正常范围内</div>', unsafe_allow_html=True)
-
-# 深度数据分析模块
-st.markdown("---")
-st.subheader("🔬 深度数据分析与风险评估")
-
-st.markdown('<h3 class="huge-font">🎯 成本效率分析</h3>', unsafe_allow_html=True)
-
-# 计算成本效率指标
-cost_efficiency = df['total_cost'] / df['efficiency_ratio']
-high_efficiency = df[df['efficiency_ratio'] > 0.7]
-low_efficiency = df[df['efficiency_ratio'] <= 0.5]
-
-col_d1, col_d2, col_d3 = st.columns(3)
-with col_d1:
-    st.markdown('<div class="big-font">📈 高效率业务</div>', unsafe_allow_html=True)
-    st.metric("高效率业务占比", f"{len(high_efficiency)/len(df)*100:.1f}%")
-with col_d2:
-    st.markdown('<div class="big-font">📉 低效率业务</div>', unsafe_allow_html=True)
-    st.metric("低效率业务占比", f"{len(low_efficiency)/len(df)*100:.1f}%")
-with col_d3:
-    st.markdown('<div class="big-font">⚖️ 成本效率</div>', unsafe_allow_html=True)
-    st.metric("成本效率比", f"{cost_efficiency.mean():.0f}")
-st.markdown('</div>', unsafe_allow_html=True)
-
-st.markdown('<h3 class="huge-font">📊 金库调拨专项分析</h3>', unsafe_allow_html=True)
-vault_data = df[df['business_type'] == '金库调拨']
-if len(vault_data) > 0:
-    col_v1, col_v2, col_v3 = st.columns(3)
-    with col_v1:
-        st.metric("调拨业务数量", len(vault_data))
-        st.metric("平均调拨金额", f"¥{vault_data['amount'].mean():,.0f}")
-    with col_v2:
-        st.metric("固定距离", "15.0km")  # 显示固定距离
-        st.metric("平均运输时长", f"{vault_data['time_duration'].mean():.1f}分钟")
-    with col_v3:
-        st.metric("调拨总成本", f"¥{vault_data['total_cost'].sum():.0f}")  # 保留到个位数
-        st.metric("单次平均成本", f"¥{vault_data['total_cost'].mean():.0f}")  # 保留到个位数
-    
-    # 显示成本构成详情
-    st.markdown("#### 💰 成本构成分析")
-    col_c1, col_c2, col_c3 = st.columns(3)
-    
-    with col_c1:
-        avg_vehicle_cost = vault_data['vehicle_cost'].mean()
-        st.metric("平均车辆成本", f"¥{avg_vehicle_cost:.0f}")
-        st.caption("包含基础运行费用、超时费、超公里费")
-    
-    with col_c2:
-        avg_labor_cost = vault_data['labor_cost'].mean()
-        st.metric("平均人工成本", f"¥{avg_labor_cost:.0f}")
-        st.caption("押运人员工资及补贴")
-    
-    with col_c3:
-        hourly_rate = 75000 / 30 / 8
-        st.metric("车辆时成本", f"¥{hourly_rate:.1f}/小时")
-        st.caption("运钞车月成本分摊")
-    
-    st.info("🚗 金库调拨业务：浦东新区 → 黄浦区，固定15km路线，专用运钞车")
-else:
-    st.warning("当前时段无金库调拨业务")
 
 # 市场冲击模拟与预警
 st.markdown("---")
