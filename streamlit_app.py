@@ -365,7 +365,7 @@ def generate_sample_data():
             else:
                 amount = np.random.uniform(10000, 800000)
             amount_list.append(amount)
-        elif business_type == '金库调拨':
+        elif business_type_list[i] == '金库调拨':
             # 金库调拨：使用专门的成本计算
             vault_result = calculate_vault_transfer_cost()
             
