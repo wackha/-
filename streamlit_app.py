@@ -189,8 +189,8 @@ def get_shanghai_area_classification():
         '近郊': {
             'regions': ['闵行区', '宝山区', '嘉定区', '浦东新区'],
             'standard_km': {
-                '金库运送': 25,    # 近郊金库运送标准25公里
-                '上门收款': 28,    # 近郊上门收款标准28公里
+                '金库运送': 30,    # 近郊金库运送标准30公里
+                '上门收款': 35,    # 近郊上门收款标准35公里
                 '现金清点': 0      # 现金清点无距离费用
             }
         },
@@ -213,11 +213,73 @@ def get_area_type(region):
             return area_type
     return '近郊'  # 默认返回近郊
 
+def calculate_cash_counting_cost(amount):
+    """
+    现金清点成本计算函数
+    根据金额大小区分大笔清点和小笔清点
+    """
+    # 设定大笔清点阈值（100万以上为大笔）
+    large_amount_threshold = 1000000
+    
+    if amount >= large_amount_threshold:
+        # 大笔清点：2个人 + 机器
+        # 人工成本：15000元/月/人 × 2人
+        monthly_labor_cost = 15000 * 2
+        # 机器折旧：200万设备，30年折旧期
+        machine_cost = 2000000 / (30 * 12)  # 每月折旧成本
+        monthly_total_cost = monthly_labor_cost + machine_cost
+        
+        # 按工作日计算（每月22个工作日，每天8小时）
+        hourly_cost = monthly_total_cost / (22 * 8)
+        
+        # 大笔清点时间：2-4小时
+        processing_hours = np.random.uniform(2, 4)
+        
+        total_cost = hourly_cost * processing_hours
+        
+        return {
+            'total_cost': total_cost,
+            'labor_cost': (monthly_labor_cost / (22 * 8)) * processing_hours,
+            'equipment_cost': (machine_cost / (22 * 8)) * processing_hours,
+            'time_duration': processing_hours * 60,  # 转换为分钟
+            'counting_type': '大笔清点',
+            'staff_count': 2,
+            'has_machine': True,
+            'processing_hours': processing_hours
+        }
+    else:
+        # 小笔清点：8个人手工清点
+        # 人工成本：7000-8000元/月/人，8个人
+        avg_salary = np.random.uniform(7000, 8000)
+        monthly_labor_cost = avg_salary * 8
+        
+        # 无机器成本
+        monthly_total_cost = monthly_labor_cost
+        
+        # 按工作日计算
+        hourly_cost = monthly_total_cost / (22 * 8)
+        
+        # 小笔清点时间：1-3小时
+        processing_hours = np.random.uniform(1, 3)
+        
+        total_cost = hourly_cost * processing_hours
+        
+        return {
+            'total_cost': total_cost,
+            'labor_cost': total_cost,  # 小笔清点全部为人工成本
+            'equipment_cost': 0,       # 无设备成本
+            'time_duration': processing_hours * 60,  # 转换为分钟
+            'counting_type': '小笔清点',
+            'staff_count': 8,
+            'has_machine': False,
+            'processing_hours': processing_hours
+        }
+
 def calculate_vehicle_cost(distance_km, time_hours, business_type, region):
     """
     统一运钞车成本计算函数（根据市区/郊区调整标准公里数）
     适用于：金库运送、上门收款
-    注意：金库调拨有单独的固定成本计算
+    注意：现金清点和金库调拨有单独的成本计算
     """
     # 基础成本：312.5元/小时
     hourly_cost = 75000 / 30 / 8  # 312.5元/小时
@@ -236,6 +298,8 @@ def calculate_vehicle_cost(distance_km, time_hours, business_type, region):
     
     # 超公里费用计算（只对有距离的业务计算）
     over_km_cost = 0
+    standard_distance = 0
+    
     if business_type in ['金库运送', '上门收款']:
         # 根据区域类型获取标准公里数
         area_type = get_area_type(region)
@@ -250,14 +314,14 @@ def calculate_vehicle_cost(distance_km, time_hours, business_type, region):
         'basic_cost': basic_cost,
         'overtime_cost': overtime_cost,
         'over_km_cost': over_km_cost,
-        'standard_distance': standard_distance if business_type in ['金库运送', '上门收款'] else 0,
-        'area_type': get_area_type(region) if business_type in ['金库运送', '上门收款'] else '市区'
+        'standard_distance': standard_distance,
+        'area_type': get_area_type(region) if business_type in ['金库运送', '上门收款'] else '无'
     }
 
 def calculate_vault_transfer_cost():
     """
     金库调拨专用成本计算函数
-    浦东金库 → 浦西金库，固定15公里路线
+    浦东金库 → 黄浦区，固定15公里路线
     """
     # 基础成本：312.5元/小时
     hourly_cost = 75000 / 30 / 8  # 312.5元/小时
@@ -299,8 +363,8 @@ def generate_sample_data():
     np.random.seed(int(time.time()) // 60)  # 每分钟更新
     
     business_types = ['金库运送', '上门收款', '金库调拨', '现金清点']
-    # 业务比例配置：金库运送占大头(50%)，上门收款较少(25%)，现金清点为两者50%(18.75%)，金库调拨每天1次(6.25%)
-    business_probabilities = [0.50, 0.25, 0.0625, 0.1875]
+    # 业务比例配置：金库运送占大头(45%)，上门收款较少(20%)，现金清点为两者40%(28.75%)，金库调拨每天1次(6.25%)
+    business_probabilities = [0.45, 0.20, 0.0625, 0.2875]
     
     regions = ['黄浦区', '徐汇区', '长宁区', '静安区', '普陀区', '虹口区', '杨浦区', '闵行区',
               '宝山区', '嘉定区', '浦东新区', '金山区', '松江区', '青浦区', '奉贤区', '崇明区']
@@ -380,6 +444,95 @@ def generate_sample_data():
     df.loc[vault_transfer_mask, 'labor_cost'] = np.random.uniform(200, 400, vault_count)  # 人工成本
     df.loc[vault_transfer_mask, 'amount'] = np.random.uniform(5000000, 20000000, vault_count)  # 调拨金额
     df.loc[vault_transfer_mask, 'time_duration'] = (base_hours + overtime_hours) * 60  # 转换为分钟
+
+    # 计算各业务类型的成本（使用新的分类计算方法）
+    vehicle_costs = []
+    labor_costs = []
+    equipment_costs = []
+    time_durations = []
+    cost_details = []
+    counting_details = []  # 现金清点详情
+    
+    for idx, row in df.iterrows():
+        business_type = row['business_type']
+        
+        if business_type == '现金清点':
+            # 现金清点：使用专门的成本计算
+            counting_result = calculate_cash_counting_cost(row['amount'])
+            
+            vehicle_costs.append(0)  # 现金清点无车辆成本
+            labor_costs.append(counting_result['labor_cost'])
+            equipment_costs.append(counting_result['equipment_cost'])
+            time_durations.append(counting_result['time_duration'])
+            counting_details.append(counting_result)
+            
+            # 成本明细
+            cost_details.append({
+                'basic_cost': 0,
+                'overtime_cost': 0,
+                'over_km_cost': 0,
+                'standard_distance': 0,
+                'area_type': '清点中心'
+            })
+            
+        elif business_type == '金库调拨':
+            # 金库调拨：使用专门的成本计算
+            vault_result = calculate_vault_transfer_cost()
+            
+            vehicle_costs.append(vault_result['vehicle_cost'])
+            labor_costs.append(vault_result['labor_cost'])
+            equipment_costs.append(0)  # 金库调拨无特殊设备成本
+            time_durations.append(vault_result['time_duration'])
+            counting_details.append({})  # 空的清点详情
+            
+            # 成本明细
+            cost_details.append({
+                'basic_cost': vault_result['basic_cost'],
+                'overtime_cost': vault_result['overtime_cost'],
+                'over_km_cost': vault_result['over_km_cost'],
+                'standard_distance': vault_result['standard_distance'],
+                'area_type': vault_result['area_type']
+            })
+            
+        else:
+            # 金库运送、上门收款：使用通用车辆成本计算
+            time_hours = row['time_duration'] / 60  # 转换为小时
+            vehicle_cost, cost_detail = calculate_vehicle_cost(
+                row['distance_km'], 
+                time_hours, 
+                business_type,
+                row['region']
+            )
+            
+            vehicle_costs.append(vehicle_cost)
+            equipment_costs.append(row['distance_km'] * 2.5)  # 设备成本按距离计算
+            time_durations.append(row['time_duration'])
+            counting_details.append({})  # 空的清点详情
+            cost_details.append(cost_detail)
+            
+            # 人工成本（根据业务类型调整）
+            if business_type == '上门收款':
+                labor_costs.append(np.random.uniform(200, 350))
+            else:  # 金库运送
+                labor_costs.append(np.random.uniform(150, 250))
+    
+    # 更新DataFrame
+    df['vehicle_cost'] = vehicle_costs
+    df['labor_cost'] = labor_costs
+    df['equipment_cost'] = equipment_costs
+    df['time_duration'] = time_durations
+    
+    # 添加成本明细
+    df['area_type'] = [detail['area_type'] for detail in cost_details]
+    df['standard_distance'] = [detail['standard_distance'] for detail in cost_details]
+    df['basic_cost'] = [detail['basic_cost'] for detail in cost_details]
+    df['overtime_cost'] = [detail['overtime_cost'] for detail in cost_details]
+    df['over_km_cost'] = [detail['over_km_cost'] for detail in cost_details]
+    
+    # 添加现金清点详情
+    df['counting_type'] = [detail.get('counting_type', '') for detail in counting_details]
+    df['staff_count'] = [detail.get('staff_count', 0) for detail in counting_details]
+    df['has_machine'] = [detail.get('has_machine', False) for detail in counting_details]
     
     # 基于市场场景和时段权重动态调整成本
     df['scenario_multiplier'] = df['market_scenario'].map({
@@ -544,6 +697,64 @@ if len(vault_data) > 0:
 else:
     st.warning("当前时段无金库调拨业务")
 st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('<h3 class="huge-font">💰 现金清点专项分析</h3>', unsafe_allow_html=True)
+counting_data = df[df['business_type'] == '现金清点']
+if len(counting_data) > 0:
+    # 大笔和小笔清点分析
+    large_counting = counting_data[counting_data['counting_type'] == '大笔清点']
+    small_counting = counting_data[counting_data['counting_type'] == '小笔清点']
+    
+    col_c1, col_c2, col_c3 = st.columns(3)
+    
+    with col_c1:
+        st.metric("清点业务总数", len(counting_data))
+        st.metric("平均清点金额", f"¥{counting_data['amount'].mean():,.0f}")
+    
+    with col_c2:
+        st.metric("大笔清点数量", len(large_counting))
+        st.metric("小笔清点数量", len(small_counting))
+    
+    with col_c3:
+        st.metric("清点总成本", f"¥{counting_data['total_cost'].sum():.0f}")
+        st.metric("平均清点时长", f"{counting_data['time_duration'].mean():.0f}分钟")
+    
+    # 成本构成分析
+    st.markdown("#### 💰 清点成本构成分析")
+    col_cost1, col_cost2, col_cost3, col_cost4 = st.columns(4)
+    
+    with col_cost1:
+        if len(large_counting) > 0:
+            st.metric("大笔清点人工成本", f"¥{large_counting['labor_cost'].mean():.0f}")
+            st.caption("2人 × 15000元/月")
+        else:
+            st.metric("大笔清点人工成本", "¥0")
+            st.caption("暂无大笔业务")
+    
+    with col_cost2:
+        if len(large_counting) > 0:
+            st.metric("机器折旧成本", f"¥{large_counting['equipment_cost'].mean():.0f}")
+            st.caption("200万设备，30年折旧")
+        else:
+            st.metric("机器折旧成本", "¥0")
+            st.caption("暂无设备使用")
+    
+    with col_cost3:
+        if len(small_counting) > 0:
+            st.metric("小笔清点人工成本", f"¥{small_counting['labor_cost'].mean():.0f}")
+            st.caption("8人 × 7000-8000元/月")
+        else:
+            st.metric("小笔清点人工成本", "¥0")
+            st.caption("暂无小笔业务")
+    
+    with col_cost4:
+        avg_efficiency = counting_data['efficiency_ratio'].mean() if len(counting_data) > 0 else 0
+        st.metric("清点效率", f"{avg_efficiency:.3f}")
+        st.caption("综合处理效率")
+    
+    st.info("💰 现金清点：大笔(≥100万)使用机器+2人，小笔(<100万)使用8人手工清点")
+else:
+    st.warning("当前时段无现金清点业务")
 
 st.write("### 🚨 风险预警分析")
 high_cost_threshold = df['total_cost'].quantile(0.9)
