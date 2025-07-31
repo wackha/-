@@ -471,61 +471,57 @@ def generate_sample_data():
     cost_details = []
     counting_details = []  # 现金清点详情
     
-    for idx, row in df.iterrows():
-        business_type = row['business_type']
-        
-        if business_type == '现金清点':
-            # 现金清点：使用专门的成本计算
-            counting_result = calculate_cash_counting_cost(row['amount'])
-            
-            vehicle_costs.append(0)  # 现金清点无车辆成本
-            labor_costs.append(counting_result['labor_cost'])
-            equipment_costs.append(counting_result['equipment_cost'])
-            time_durations.append(counting_result['time_duration'])
-            counting_details.append(counting_result)
-            
-            # 成本明细
-            cost_details.append({
-                'basic_cost': 0,
-                'overtime_cost': 0,
-                'over_km_cost': 0,
-                'standard_distance': 0,
-                'area_type': '清点中心'
-            })
-            
-        elif business_type == '金库调拨':
-            # 金库调拨：使用专门的成本计算
-            vault_result = calculate_vault_transfer_cost()
-            
-            vehicle_costs.append(vault_result['vehicle_cost'])
-            labor_costs.append(vault_result['labor_cost'])
-            equipment_costs.append(0)  # 金库调拨无特殊设备成本
-            time_durations.append(vault_result['time_duration'])
-            counting_details.append({})  # 空的清点详情
-            
-            # 成本明细
-            cost_details.append({
-                'basic_cost': vault_result['basic_cost'],
-                'overtime_cost': vault_result['overtime_cost'],
-                'over_km_cost': vault_result['over_km_cost'],
-                'standard_distance': vault_result['standard_distance'],
-                'area_type': vault_result['area_type']
-            })
-            
-        else:
-            # 金库运送、上门收款：使用通用车辆成本计算
-            time_hours = row['time_duration'] / 60  # 转换为小时
-            vehicle_cost, cost_detail = calculate_vehicle_cost(
-                row['distance_km'], 
-                time_hours, 
-                row['region']
-            )
-            
-            vehicle_costs.append(vehicle_cost)
-            equipment_costs.append(row['distance_km'] * 2.5)  # 设备成本按距离计算
-            time_durations.append(row['time_duration'])
-            counting_details.append({})  # 空的清点详情
-            cost_details.append(cost_detail)
+for idx, row in df.iterrows():
+    business_type = row['business_type']
+    
+    if business_type == '现金清点':
+        # 现金清点：使用专门的成本计算
+        counting_result = calculate_cash_counting_cost(row['amount'])
+        vehicle_costs.append(0)  # 现金清点无车辆成本
+        labor_costs.append(counting_result['labor_cost'])
+        equipment_costs.append(counting_result['equipment_cost'])
+        time_durations.append(counting_result['time_duration'])
+        counting_details.append(counting_result)
+        # 成本明细
+        cost_details.append({
+            'basic_cost': 0,
+            'overtime_cost': 0,
+            'over_km_cost': 0,
+            'standard_distance': 0,
+            'area_type': '清点中心'
+        })
+
+    elif business_type == '金库调拨':
+        # 金库调拨：使用专门的成本计算
+        vault_result = calculate_vault_transfer_cost()
+        vehicle_costs.append(vault_result['vehicle_cost'])
+        labor_costs.append(0)  # 只要运钞车费用，无人工费用
+        equipment_costs.append(0)  # 金库调拨无特殊设备成本
+        time_durations.append(vault_result['time_duration'])
+        counting_details.append({})  # 空的清点详情
+        # 成本明细
+        cost_details.append({
+            'basic_cost': vault_result['basic_cost'],
+            'overtime_cost': vault_result['overtime_cost'],
+            'over_km_cost': vault_result['over_km_cost'],
+            'standard_distance': vault_result['standard_distance'],
+            'area_type': vault_result['area_type']
+        })
+
+    else:
+        # 金库运送、上门收款：使用通用车辆成本计算
+        time_hours = row['time_duration'] / 60  # 转换为小时
+        vehicle_cost, cost_detail = calculate_vehicle_cost(
+            row['distance_km'],
+            time_hours,
+            row['region']
+        )
+        vehicle_costs.append(vehicle_cost)
+        labor_costs.append(0)  # 只要运钞车费用，无人工费用
+        equipment_costs.append(row['distance_km'] * 2.5)  # 设备成本按距离计算
+        time_durations.append(row['time_duration'])
+        counting_details.append({})  # 空的清点详情
+        cost_details.append(cost_detail)
     
     # 更新DataFrame
     df['vehicle_cost'] = vehicle_costs
