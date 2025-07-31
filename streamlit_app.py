@@ -615,8 +615,8 @@ df = generate_sample_data()
 historical_df = generate_historical_data(10)
 cost_optimization = analyze_cost_optimization(df)
 
-# 核心指标展示
-col1, col2, col3, col4, col5 = st.columns(5)
+# 核心指标展示 - 第一行4个指标
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.metric(
@@ -649,13 +649,33 @@ with col4:
         delta=f"{np.random.uniform(-1, 3):+.1f}%"
     )
 
-with col5:
+# 第二行 - 优化潜力指标，使用居中布局
+st.markdown('<div style="margin: 20px 0;"></div>', unsafe_allow_html=True)
+
+# 使用三列布局，中间列放置指标，实现居中效果
+col_left, col_center, col_right = st.columns([1, 2, 1])
+
+with col_center:
     optimization_potential = cost_optimization['optimization_potential'] * 100
-    st.metric(
-        label="🎯 优化潜力",
-        value=f"{optimization_potential:.1f}%",
-        delta=f"节约 ¥{total_cost * cost_optimization['cost_reduction_estimate']:,.0f}"
-    )
+    
+    # 使用HTML样式创建突出显示的优化潜力指标
+    st.markdown(f"""
+    <div style='
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border-radius: 15px;
+        padding: 25px;
+        text-align: center;
+        color: white;
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+        margin: 10px 0;
+    '>
+        <h3 style='margin: 0 0 10px 0; font-size: 1.2rem;'>🎯 优化潜力 & 成本节约预估</h3>
+        <h1 style='margin: 0; font-size: 2.5rem; font-weight: bold;'>{optimization_potential:.1f}%</h1>
+        <p style='margin: 10px 0 0 0; font-size: 1.1rem; opacity: 0.9;'>
+            预计节约 ¥{total_cost * cost_optimization['cost_reduction_estimate']:,.0f}
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # 图表展示区域
 st.markdown("---")
