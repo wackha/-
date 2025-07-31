@@ -473,7 +473,7 @@ def generate_sample_data():
     
 for idx, row in df.iterrows():
     business_type = row['business_type']
-    
+
     if business_type == '现金清点':
         # 现金清点：使用专门的成本计算
         counting_result = calculate_cash_counting_cost(row['amount'])
