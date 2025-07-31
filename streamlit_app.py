@@ -353,8 +353,45 @@ def calculate_vault_transfer_cost():
         'standard_distance': 15,  # 金库调拨标准公里数
         'area_type': '专线',  # 专线标识
         'labor_cost': np.random.uniform(400, 600),  # 高安全等级人工成本
-        'amount': np.random.uniform(5000000, 20000000)  # 调拨金额
-    }
+        # 生成金额数据，确保现金清点业务有合理的大笔小笔分布
+        amount_list = []
+        for i in range(n_records):
+            if business_type_list[i] == '现金清点':
+                # 现金清点：30%概率为大笔(100万以上)，70%概率为小笔
+                if np.random.random() < 0.3:
+                    # 大笔业务：100万-1000万
+                    amount = np.random.uniform(1000000, 10000000)
+                else:
+                    # 小笔业务：1万-80万
+                    amount = np.random.uniform(10000, 800000)
+                amount_list.append(amount)
+            elif business_type_list[i] == '金库调拨':
+                # 金库调拨：500万-2000万
+                amount_list.append(np.random.uniform(5000000, 20000000))
+            else:
+                # 其他业务：指数分布
+                amount_list.append(np.random.exponential(50000))
+        
+        data = {
+            'txn_id': [f'TXN{i:06d}' for i in range(n_records)],
+            'business_type': business_type_list,
+            'region': region_list,
+            'amount': amount_list,  # 使用新的金额生成逻辑
+            'distance_km': np.random.gamma(2, 5, n_records),
+            'time_duration': np.random.gamma(3, 20, n_records),
+            'vehicle_cost': np.random.normal(200, 50, n_records),
+            'labor_cost': np.random.normal(150, 30, n_records),
+            'efficiency_ratio': np.random.beta(3, 2, n_records),
+            'start_time': pd.date_range(start=datetime.now() - timedelta(hours=24), 
+                                       periods=n_records, freq='5min'),
+            'is_anomaly': np.random.choice([True, False], n_records, p=[0.1, 0.9]),
+            # 新增字段：市场冲击场景
+            'market_scenario': np.random.choice(['正常', '高需求期', '紧急状况', '节假日'], 
+                                              n_records, p=[0.6, 0.2, 0.1, 0.1]),
+            # 动态时段权重
+            'time_weight': np.random.choice([1.0, 1.1, 1.3, 1.6], n_records, p=[0.4, 0.3, 0.2, 0.1])
+        }
+            }
 
 # 数据生成函数
 @st.cache_data(ttl=60)  # 缓存1分钟
@@ -729,7 +766,7 @@ if len(counting_data) > 0:
             st.caption("2人 × 15000元/月")
         else:
             st.metric("大笔清点人工成本", "¥0")
-            st.caption("暂无大笔业务")
+            st.caption("数据生成中...")
     
     with col_cost2:
         if len(large_counting) > 0:
@@ -737,7 +774,7 @@ if len(counting_data) > 0:
             st.caption("200万设备，30年折旧")
         else:
             st.metric("机器折旧成本", "¥0")
-            st.caption("暂无设备使用")
+            st.caption("数据生成中...")
     
     with col_cost3:
         if len(small_counting) > 0:
@@ -745,14 +782,62 @@ if len(counting_data) > 0:
             st.caption("8人 × 7000-8000元/月")
         else:
             st.metric("小笔清点人工成本", "¥0")
-            st.caption("暂无小笔业务")
+            st.caption("数据生成中...")
     
     with col_cost4:
         avg_efficiency = counting_data['efficiency_ratio'].mean() if len(counting_data) > 0 else 0
         st.metric("清点效率", f"{avg_efficiency:.3f}")
         st.caption("综合处理效率")
     
-    st.info("💰 现金清点：大笔(≥100万)使用机器+2人，小笔(<100万)使用8人手工清点")
+    # 大笔vs小笔对比图表
+    if len(large_counting) > 0 and len(small_counting) > 0:
+        comparison_data = pd.DataFrame({
+            '清点类型': ['大笔清点', '小笔清点'],
+            '业务数量': [len(large_counting), len(small_counting)],
+            '平均成本': [large_counting['total_cost'].mean(), small_counting['total_cost'].mean()],
+            '平均时长': [large_counting['time_duration'].mean(), small_counting['time_duration'].mean()]
+        })
+        
+        col_chart1, col_chart2 = st.columns(2)
+        
+        with col_chart1:
+            fig_count = px.pie(
+                comparison_data,
+                values='业务数量',
+                names='清点类型',
+                title="大笔vs小笔清点业务占比",
+                color_discrete_sequence=['#28a745', '#ffc107']
+            )
+            fig_count.update_layout(
+                paper_bgcolor='white',
+                plot_bgcolor='white',
+                font_color='black'
+            )
+            st.plotly_chart(fig_count, use_container_width=True)
+        
+        with col_chart2:
+            fig_cost = px.bar(
+                comparison_data,
+                x='清点类型',
+                y='平均成本',
+                title="大笔vs小笔平均成本对比",
+                color='清点类型',
+                color_discrete_sequence=['#28a745', '#ffc107']
+            )
+            fig_cost.update_layout(
+                paper_bgcolor='white',
+                plot_bgcolor='white',
+                font_color='black'
+            )
+            st.plotly_chart(fig_cost, use_container_width=True)
+    elif len(large_counting) > 0 or len(small_counting) > 0:
+        st.info("📊 数据生成中，完整对比图表将在下次刷新时显示")
+    
+    # 业务分布说明
+    large_rate = len(large_counting) / len(counting_data) * 100 if len(counting_data) > 0 else 0
+    small_rate = len(small_counting) / len(counting_data) * 100 if len(counting_data) > 0 else 0
+    
+    st.info(f"💰 现金清点业务分布：大笔清点({large_rate:.1f}%) - 机器+2人 | 小笔清点({small_rate:.1f}%) - 8人手工")
 else:
     st.warning("当前时段无现金清点业务")
 
