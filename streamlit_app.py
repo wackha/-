@@ -366,23 +366,23 @@ def generate_sample_data():
                 amount = np.random.uniform(10000, 800000)
             amount_list.append(amount)
         elif business_type == '金库调拨':
-    # 金库调拨：使用专门的成本计算
-    vault_result = calculate_vault_transfer_cost()
+            # 金库调拨：使用专门的成本计算
+            vault_result = calculate_vault_transfer_cost()
+            
+            vehicle_costs.append(vault_result['vehicle_cost'])
+            labor_costs.append(0)  # 只要运钞车费用，无人工费用
+            equipment_costs.append(0)
+            time_durations.append(vault_result['time_duration'])
+            counting_details.append({})
     
-    vehicle_costs.append(vault_result['vehicle_cost'])
-    labor_costs.append(0)  # 只要运钞车费用，无人工费用
-    equipment_costs.append(0)
-    time_durations.append(vault_result['time_duration'])
-    counting_details.append({})
-    
-    # 成本明细
-    cost_details.append({
-        'basic_cost': vault_result['basic_cost'],
-        'overtime_cost': vault_result['overtime_cost'],
-        'over_km_cost': vault_result['over_km_cost'],
-        'standard_distance': vault_result['standard_distance'],
-        'area_type': vault_result['area_type']
-    })
+            # 成本明细
+            cost_details.append({
+                'basic_cost': vault_result['basic_cost'],
+                'overtime_cost': vault_result['overtime_cost'],
+                'over_km_cost': vault_result['over_km_cost'],
+                'standard_distance': vault_result['standard_distance'],
+                'area_type': vault_result['area_type']
+            })
 
         else:
             # 金库运送、上门收款：使用通用车辆成本计算
@@ -398,9 +398,9 @@ def generate_sample_data():
             time_durations.append(row['time_duration'])
             counting_details.append({})
             cost_details.append(cost_detail)
-        else:
-            # 金库运送、上门收款金额随机，但不影响成本
-            amount_list.append(np.random.uniform(10000, 1000000))
+    else:
+        # 金库运送、上门收款金额随机，但不影响成本
+        amount_list.append(np.random.uniform(10000, 1000000))
     
     data = {
         'txn_id': [f'TXN{i:06d}' for i in range(n_records)],
