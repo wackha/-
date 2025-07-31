@@ -303,7 +303,7 @@ def calculate_vehicle_cost(distance_km, time_hours, region):
 
 def calculate_vault_transfer_cost():
     """
-    金库调拨专用成本计算函数（与金额无关）
+    金库调拨专用成本计算函数（仅运钞车费用，无人工费用）
     """
     hourly_cost = 75000 / 30 / 8
     base_hours = np.random.uniform(1, 2)
@@ -323,7 +323,8 @@ def calculate_vault_transfer_cost():
         'distance_km': 15.0,
         'standard_distance': 15,
         'area_type': '专线',
-        'amount': np.random.uniform(5000000, 20000000)  # 仅用于展示，不参与成本
+        'amount': np.random.uniform(5000000, 20000000)  # 仅用于展示
+        # 不再返回 labor_cost
     }
 
 # 数据生成函数
@@ -364,9 +365,39 @@ def generate_sample_data():
             else:
                 amount = np.random.uniform(10000, 800000)
             amount_list.append(amount)
-        elif business_type_list[i] == '金库调拨':
-            # 金库调拨金额可以保留，但后续成本计算不再用到
-            amount_list.append(np.random.uniform(5000000, 20000000))
+        elif business_type == '金库调拨':
+    # 金库调拨：使用专门的成本计算
+    vault_result = calculate_vault_transfer_cost()
+    
+    vehicle_costs.append(vault_result['vehicle_cost'])
+    labor_costs.append(0)  # 只要运钞车费用，无人工费用
+    equipment_costs.append(0)
+    time_durations.append(vault_result['time_duration'])
+    counting_details.append({})
+    
+    # 成本明细
+    cost_details.append({
+        'basic_cost': vault_result['basic_cost'],
+        'overtime_cost': vault_result['overtime_cost'],
+        'over_km_cost': vault_result['over_km_cost'],
+        'standard_distance': vault_result['standard_distance'],
+        'area_type': vault_result['area_type']
+    })
+
+        else:
+            # 金库运送、上门收款：使用通用车辆成本计算
+            time_hours = row['time_duration'] / 60
+            vehicle_cost, cost_detail = calculate_vehicle_cost(
+                row['distance_km'],
+                time_hours,
+                row['region']
+            )
+            vehicle_costs.append(vehicle_cost)
+            labor_costs.append(0)  # 只要运钞车费用，无人工费用
+            equipment_costs.append(row['distance_km'] * 2.5)
+            time_durations.append(row['time_duration'])
+            counting_details.append({})
+            cost_details.append(cost_detail)
         else:
             # 金库运送、上门收款金额随机，但不影响成本
             amount_list.append(np.random.uniform(10000, 1000000))
