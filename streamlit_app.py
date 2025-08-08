@@ -956,14 +956,15 @@ if len(high_cost_businesses) > 0:
     st.markdown(f'<div class="big-font" style="color: #dc3545; padding: 15px; background: #f8d7da; border-radius: 10px; margin: 15px 0;">⚠️ 发现 {len(high_cost_businesses)} 笔高成本业务需要关注</div>', unsafe_allow_html=True)
     
     # 格式化显示数据，所有数值精确到个位数
-    display_data = high_cost_businesses[['txn_id', 'business_type', 'region', 'total_cost', 'market_scenario', 'amount', 'distance_km', 'time_duration']].copy()
+    display_data = high_cost_businesses[['txn_id', 'start_time', 'business_type', 'region', 'total_cost', 'market_scenario', 'amount', 'distance_km', 'time_duration']].copy()
+
+    # 并在格式化数值之前添加时间格式化：
+    display_data['start_time'] = display_data['start_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
     display_data['total_cost'] = display_data['total_cost'].round(0).astype(int)
     display_data['amount'] = display_data['amount'].round(0).astype(int)  
     display_data['distance_km'] = display_data['distance_km'].round(0).astype(int)
     display_data['time_duration'] = display_data['time_duration'].round(0).astype(int)
-    
-    st.dataframe(display_data, use_container_width=True)
-    
+        
     # 风险业务统计
     col_risk1, col_risk2, col_risk3, col_risk4 = st.columns(4)
     with col_risk1:
@@ -1609,8 +1610,11 @@ st.subheader("📋 综合数据分析与异常检测")
 
 # 数据格式化函数
 def format_dataframe_for_display(df):
-    """格式化数据框用于显示，数值精确到个位数"""
     display_df = df.copy()
+    
+    # 格式化时间列
+    if 'start_time' in display_df.columns:
+        display_df['start_time'] = display_df['start_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
     
     # 格式化数值列，精确到个位数
     if 'amount' in display_df.columns:
@@ -1655,9 +1659,9 @@ with tab1:
     if selected_scenario != '全部':
         filtered_normal = filtered_normal[filtered_normal['market_scenario'] == selected_scenario]
     
-    # 显示列定义
-    display_columns = ['txn_id', 'business_type', 'region', 'market_scenario', 'amount', 
-                      'total_cost', 'efficiency_ratio', 'distance_km', 'time_duration']
+    
+    display_columns = ['txn_id', 'start_time', 'business_type', 'region', 'market_scenario', 'amount', 
+                  'total_cost', 'efficiency_ratio', 'distance_km', 'time_duration']
     
     # 格式化数据并显示
     formatted_normal = format_dataframe_for_display(filtered_normal[display_columns])
@@ -1831,5 +1835,6 @@ with col3:
 # 自动刷新（可选）
 # time.sleep(60)  # 60秒后自动刷新
 # st.rerun()
+
 
 
