@@ -327,27 +327,177 @@ def calculate_vault_transfer_cost():
         # 不再返回 labor_cost
     }
 
-@st.cache_data(ttl=60)  # 缓存1分钟
+# 在现有的generate_sample_data函数之前添加以下代码
+
+# 浦东周浦到上海各区实际距离数据（重新核实修正版）
+def get_pudong_zhoupu_to_districts_distance():
+    """浦东新区周浦镇到上海各区的实际距离（公里）- 重新核实修正版"""
+    return {
+        # 市区 - 周浦位于浦东外环外，到市区距离较远
+        '黄浦区': 28,      # 周浦→外滩约28km
+        '徐汇区': 32,      # 周浦→徐家汇约32km  
+        '长宁区': 38,      # 周浦→中山公园约38km
+        '静安区': 30,      # 周浦→静安寺约30km
+        '普陀区': 42,      # 周浦→真如约42km
+        '虹口区': 35,      # 周浦→四川北路约35km
+        '杨浦区': 33,      # 周浦→五角场约33km
+        
+        # 近郊 - 周浦到邻近区域
+        '闵行区': 25,      # 周浦→莘庄约25km（相对较近）
+        '宝山区': 50,      # 周浦→宝山约50km（需跨越市区）
+        '嘉定区': 55,      # 周浦→嘉定约55km（距离较远）
+        '浦东新区': 15,    # 周浦→陆家嘴约15km
+        
+        # 远郊 - 周浦到远郊区域（重新核实）
+        '金山区': 60,      # 周浦→金山石化约60km（经G1501外环高速）
+        '松江区': 48,      # 周浦→松江新城约48km（经S32或G60高速）
+        '青浦区': 55,      # 周浦→青浦约55km（经S32高速）
+        '奉贤区': 28,      # 周浦→奉贤约28km（都在南部，较近）
+        '崇明区': 70       # 周浦→崇明约70km（含过隧道时间）
+    }
+
+# 基于修正距离的区域重新分类
+def get_shanghai_area_classification_from_zhoupu():
+    """上海区域分类：从周浦出发的标准距离（基于修正距离重新分类）"""
+    return {
+        # 近距离区域（≤30km）
+        '近距离': {
+            'regions': ['浦东新区', '闵行区', '奉贤区', '黄浦区', '静安区'],
+            'standard_km': {
+                '金库运送': 25,    # 近距离标准25公里
+                '上门收款': 28,    # 近距离上门收款标准28公里
+                '现金清点': 0      # 现金清点无距离费用
+            }
+        },
+        # 中距离区域（30-40km）
+        '中距离': {
+            'regions': ['徐汇区', '杨浦区', '虹口区', '长宁区'],
+            'standard_km': {
+                '金库运送': 35,    # 中距离标准35公里
+                '上门收款': 38,    # 中距离上门收款标准38公里
+                '现金清点': 0      # 现金清点无距离费用
+            }
+        },
+        # 远距离区域（≥40km）
+        '远距离': {
+            'regions': ['普陀区', '松江区', '宝山区', '嘉定区', '青浦区', '金山区', '崇明区'],
+            'standard_km': {
+                '金库运送': 50,    # 远距离标准50公里
+                '上门收款': 55,    # 远距离上门收款标准55公里
+                '现金清点': 0      # 现金清点无距离费用
+            }
+        }
+    }
+
+def get_area_type_from_zhoupu(region):
+    """根据区域获取地区类型（基于周浦出发）"""
+    area_classification = get_shanghai_area_classification_from_zhoupu()
+    for area_type, config in area_classification.items():
+        if region in config['regions']:
+            return area_type
+    return '中距离'  # 默认返回中距离
+
+def calculate_realistic_time_duration_from_zhoupu(distance_km, business_type, traffic_factor=1.0):
+    """基于实际距离计算真实配送时间（从周浦出发）"""
+    # 从周浦出发的行驶速度（考虑实际路况）
+    if distance_km <= 30:  # 近距离
+        avg_speed = 35  # km/h，周浦到邻近区域
+    elif distance_km <= 45:  # 中距离
+        avg_speed = 32  # km/h，市区段较多，拥堵
+    else:  # 远距离（如松江、青浦等）
+        avg_speed = 45  # km/h，主要走高速公路
+    
+    # 基础行驶时间
+    base_driving_time = distance_km / avg_speed * 60  # 分钟
+    
+    # 业务操作时间
+    operation_time = {
+        '金库运送': np.random.uniform(20, 40),
+        '上门收款': np.random.uniform(25, 50),
+        '金库调拨': np.random.uniform(35, 70),
+        '现金清点': np.random.uniform(80, 280)
+    }.get(business_type, 25)
+    
+    # 路况延误时间
+    if distance_km > 45:  # 到远郊（松江、青�pu等）
+        traffic_delay = np.random.uniform(10, 20)  # 高速路段，延误较少
+    elif distance_km > 30:  # 到市区
+        traffic_delay = np.random.uniform(15, 25)  # 市区拥堵较多
+    else:  # 近距离
+        traffic_delay = np.random.uniform(8, 15)
+    
+    total_time = (base_driving_time + operation_time + traffic_delay) * traffic_factor
+    variation = np.random.uniform(0.92, 1.08)
+    final_time = total_time * variation
+    
+    return max(25, final_time)
+
+def calculate_over_distance_cost(actual_distance, standard_distance, business_type):
+    """计算超距离成本（基于周浦的距离标准）"""
+    over_distance = max(0, actual_distance - standard_distance)
+    
+    # 超距离费率（元/公里）
+    over_distance_rate = {
+        '金库运送': 15,    # 从周浦出发超距离费率
+        '上门收款': 12,    # 从周浦出发超距离费率
+        '金库调拨': 18,    # 金库调拨超距离费率最高
+        '现金清点': 0      # 现金清点无距离费用
+    }.get(business_type, 15)
+    
+    over_distance_cost = over_distance * over_distance_rate
+    
+    return {
+        'over_distance': over_distance,
+        'over_distance_cost': over_distance_cost,
+        'actual_distance': actual_distance,
+        'standard_distance': standard_distance
+    }
+
+# 修改原有的generate_sample_data函数，替换为：
+@st.cache_data(ttl=60)
 def generate_sample_data():
-    """生成示例数据 - 根据业务比例要求调整"""
-    np.random.seed(int(time.time()) // 60)  # 每分钟更新
+    """生成基于周浦真实距离的示例数据"""
+    np.random.seed(int(time.time()) // 60)
 
     business_types = ['金库运送', '上门收款', '金库调拨', '现金清点']
     business_probabilities = [0.45, 0.20, 0.0625, 0.2875]
-    regions = ['黄浦区', '徐汇区', '长宁区', '静安区', '普陀区', '虹口区', '杨浦区', '闵行区',
-               '宝山区', '嘉定区', '浦东新区', '金山区', '松江区', '青浦区', '奉贤区', '崇明区']
+    
+    # 使用修正后的距离数据
+    distance_data = get_pudong_zhoupu_to_districts_distance()
+    regions = list(distance_data.keys())
+    
     n_records = 300
 
     # 生成业务类型和区域
     business_type_list = np.random.choice(business_types, n_records, p=business_probabilities)
     region_list = []
+    actual_distance_list = []
+    time_duration_list = []
+    
     for i in range(n_records):
         if business_type_list[i] == '金库调拨':
-            region_list.append('浦东新区')
+            region = '浦东新区'
+            actual_distance = 15.0
         else:
-            region_list.append(np.random.choice(regions))
+            region = np.random.choice(regions)
+            actual_distance = distance_data[region]
+            # 距离波动 ±10%
+            variation = np.random.uniform(0.9, 1.1)
+            actual_distance = actual_distance * variation
+        
+        region_list.append(region)
+        actual_distance_list.append(actual_distance)
+        
+        # 计算真实时间
+        traffic_factor = np.random.uniform(0.85, 1.35)
+        time_duration = calculate_realistic_time_duration_from_zhoupu(
+            actual_distance, 
+            business_type_list[i], 
+            traffic_factor
+        )
+        time_duration_list.append(time_duration)
 
-    # 生成金额
+    # 生成金额（保持原有逻辑）
     amount_list = []
     for i in range(n_records):
         if business_type_list[i] == '现金清点':
@@ -361,28 +511,13 @@ def generate_sample_data():
             amount = np.random.uniform(10000, 1000000)
         amount_list.append(amount)
 
-    # 生成距离和时长
-    distance_list = []
-    time_duration_list = []
-    for i in range(n_records):
-        if business_type_list[i] == '金库调拨':
-            distance_list.append(15.0)
-            base_hours = np.random.uniform(1, 2)
-            overtime_hours = np.random.uniform(0.5, 1.5) if np.random.random() < 0.1 else 0
-            time_duration_list.append((base_hours + overtime_hours) * 60)
-        else:
-            d = np.random.gamma(2, 5)
-            distance_list.append(d)
-            t = np.random.gamma(3, 20)
-            time_duration_list.append(t)
-
-    # 生成其他字段
+    # 创建数据框
     data = {
         'txn_id': [f'TXN{i:06d}' for i in range(n_records)],
         'business_type': business_type_list,
         'region': region_list,
         'amount': amount_list,
-        'distance_km': distance_list,
+        'distance_km': actual_distance_list,  # 使用实际距离
         'time_duration': time_duration_list,
         'efficiency_ratio': np.random.beta(3, 2, n_records),
         'start_time': pd.date_range(start=datetime.now() - timedelta(hours=24), periods=n_records, freq='5min'),
@@ -392,22 +527,40 @@ def generate_sample_data():
     }
     df = pd.DataFrame(data)
 
-    # 下面统一计算成本
+    # 计算成本（使用修正后的标准距离）
     vehicle_costs = []
     labor_costs = []
     equipment_costs = []
-    time_durations = []
+    over_distance_costs = []
+    standard_distances = []
+    over_distances = []
     cost_details = []
     counting_details = []
 
     for idx, row in df.iterrows():
         business_type = row['business_type']
+        region = row['region']
+        actual_distance = row['distance_km']
+        
+        # 获取标准距离
+        area_type = get_area_type_from_zhoupu(region)
+        area_classification = get_shanghai_area_classification_from_zhoupu()
+        standard_distance = area_classification[area_type]['standard_km'].get(business_type, 35)
+        
+        # 计算超距离
+        over_distance_result = calculate_over_distance_cost(
+            actual_distance, 
+            standard_distance, 
+            business_type
+        )
+        
+        # 成本计算逻辑（保持原有逻辑，只修改距离相关部分）
         if business_type == '现金清点':
             counting_result = calculate_cash_counting_cost(row['amount'])
             vehicle_costs.append(0)
             labor_costs.append(counting_result['labor_cost'])
             equipment_costs.append(counting_result['equipment_cost'])
-            time_durations.append(counting_result['time_duration'])
+            over_distance_costs.append(0)
             counting_details.append(counting_result)
             cost_details.append({
                 'basic_cost': 0,
@@ -421,45 +574,58 @@ def generate_sample_data():
             vehicle_costs.append(vault_result['vehicle_cost'])
             labor_costs.append(0)
             equipment_costs.append(0)
-            time_durations.append(vault_result['time_duration'])
+            over_distance_costs.append(over_distance_result['over_distance_cost'])
             counting_details.append({})
             cost_details.append({
                 'basic_cost': vault_result['basic_cost'],
                 'overtime_cost': vault_result['overtime_cost'],
-                'over_km_cost': vault_result['over_km_cost'],
-                'standard_distance': vault_result['standard_distance'],
-                'area_type': vault_result['area_type']
+                'over_km_cost': over_distance_result['over_distance_cost'],
+                'standard_distance': standard_distance,
+                'area_type': '专线'
             })
         else:
             time_hours = row['time_duration'] / 60
             vehicle_cost, cost_detail = calculate_vehicle_cost(
-                row['distance_km'],
+                actual_distance,
                 time_hours,
-                row['region']
+                region
             )
             vehicle_costs.append(vehicle_cost)
             labor_costs.append(0)
-            equipment_costs.append(row['distance_km'] * 2.5)
-            time_durations.append(row['time_duration'])
+            equipment_costs.append(actual_distance * 2.8)
+            over_distance_costs.append(over_distance_result['over_distance_cost'])
             counting_details.append({})
+            cost_detail['over_km_cost'] = over_distance_result['over_distance_cost']
             cost_details.append(cost_detail)
 
+        standard_distances.append(standard_distance)
+        over_distances.append(over_distance_result['over_distance'])
+
+    # 添加计算结果到数据框
     df['vehicle_cost'] = vehicle_costs
     df['labor_cost'] = labor_costs
     df['equipment_cost'] = equipment_costs
-    df['time_duration'] = time_durations
+    df['over_distance_cost'] = over_distance_costs
+    df['standard_distance'] = standard_distances
+    df['over_distance'] = over_distances
     df['area_type'] = [detail['area_type'] for detail in cost_details]
-    df['standard_distance'] = [detail['standard_distance'] for detail in cost_details]
     df['basic_cost'] = [detail['basic_cost'] for detail in cost_details]
     df['overtime_cost'] = [detail['overtime_cost'] for detail in cost_details]
     df['over_km_cost'] = [detail['over_km_cost'] for detail in cost_details]
     df['counting_type'] = [detail.get('counting_type', '') for detail in counting_details]
     df['staff_count'] = [detail.get('staff_count', 0) for detail in counting_details]
     df['has_machine'] = [detail.get('has_machine', False) for detail in counting_details]
+    
+    # 成本计算
     df['scenario_multiplier'] = df['market_scenario'].map({
         '正常': 1.0, '高需求期': 1.1, '紧急状况': 1.5, '节假日': 1.5
     })
-    df['total_cost'] = (df['vehicle_cost'] + df['distance_km'] * 2.5) * df['scenario_multiplier'] * df['time_weight']
+    df['total_cost'] = (
+        df['vehicle_cost'] + 
+        df['labor_cost'] + 
+        df['equipment_cost'] + 
+        df['over_distance_cost']
+    ) * df['scenario_multiplier'] * df['time_weight']
     df['cost_per_km'] = df['total_cost'] / df['distance_km']
 
     return df
@@ -1665,4 +1831,5 @@ with col3:
 # 自动刷新（可选）
 # time.sleep(60)  # 60秒后自动刷新
 # st.rerun()
+
 
