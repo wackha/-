@@ -485,44 +485,44 @@ def generate_sample_data():
     for i in range(n_records):
         if business_type_list[i] == '金库调拨':
             region_list.append('浦东新区')
-            distance_list.append(15.0)
-            # 修正这里的时间计算
+            actual_distance_list.append(15.0)
+            # 修正金库调拨的时间计算
             base_minutes = np.random.uniform(35, 50)  # 35-50分钟基础时间
             overtime_minutes = np.random.uniform(10, 25) if np.random.random() < 0.15 else 0
             total_minutes = base_minutes + overtime_minutes
-            time_duration_list.append(total_minutes)  # 现在是35-75分钟，合理范围
+            time_duration_list.append(total_minutes)  # 35-75分钟，合理范围
         else:
             region = np.random.choice(regions)
             actual_distance = distance_data[region]
             # 距离波动 ±10%
             variation = np.random.uniform(0.9, 1.1)
             actual_distance = actual_distance * variation
-        
-        region_list.append(region)
-        actual_distance_list.append(actual_distance)
-        
-        # 计算真实时间
-        traffic_factor = np.random.uniform(0.85, 1.35)
-        time_duration = calculate_realistic_time_duration_from_zhoupu(
-            actual_distance, 
-            business_type_list[i], 
-            traffic_factor
-        )
-        time_duration_list.append(time_duration)
-
-    # 生成金额（保持原有逻辑）
-    amount_list = []
-    for i in range(n_records):
-        if business_type_list[i] == '现金清点':
-            if np.random.random() < 0.3:
-                amount = np.random.uniform(1000000, 10000000)
+            
+            region_list.append(region)
+            actual_distance_list.append(actual_distance)
+            
+            # 计算真实时间
+            traffic_factor = np.random.uniform(0.85, 1.35)
+            time_duration = calculate_realistic_time_duration_from_zhoupu(
+                actual_distance, 
+                business_type_list[i], 
+                traffic_factor
+            )
+            time_duration_list.append(time_duration)
+    
+        # 生成金额（保持原有逻辑）
+        amount_list = []
+        for i in range(n_records):
+            if business_type_list[i] == '现金清点':
+                if np.random.random() < 0.3:
+                    amount = np.random.uniform(1000000, 10000000)
+                else:
+                    amount = np.random.uniform(10000, 800000)
+            elif business_type_list[i] == '金库调拨':
+                amount = np.random.uniform(5000000, 20000000)
             else:
-                amount = np.random.uniform(10000, 800000)
-        elif business_type_list[i] == '金库调拨':
-            amount = np.random.uniform(5000000, 20000000)
-        else:
-            amount = np.random.uniform(10000, 1000000)
-        amount_list.append(amount)
+                amount = np.random.uniform(10000, 1000000)
+            amount_list.append(amount)
 
     # 创建数据框
     data = {
@@ -1848,6 +1848,7 @@ with col3:
 # 自动刷新（可选）
 # time.sleep(60)  # 60秒后自动刷新
 # st.rerun()
+
 
 
 
