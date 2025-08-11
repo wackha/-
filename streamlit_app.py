@@ -306,28 +306,36 @@ def calculate_vault_transfer_cost():
     金库调拨专用成本计算函数（仅运钞车费用，无人工费用）
     """
     hourly_cost = 75000 / 30 / 8
-    base_hours = np.random.uniform(1, 2)
-    overtime_hours = np.random.uniform(0.5, 1.5) if np.random.random() < 0.1 else 0
-    over_km = np.random.uniform(1, 3) if np.random.random() < 0.05 else 0
+    
+    # 修正：15km金库调拨的合理时间
+    base_minutes = np.random.uniform(35, 50)  # 35-50分钟（合理范围）
+    base_hours = base_minutes / 60
+    
+    # 超时情况：仅在交通拥堵等特殊情况下
+    overtime_minutes = np.random.uniform(10, 25) if np.random.random() < 0.15 else 0  # 15%概率超时
+    overtime_hours = overtime_minutes / 60
+    
+    # 超公里的情况很少（专线路线固定）
+    over_km = np.random.uniform(0.5, 2) if np.random.random() < 0.05 else 0  # 5%概率超公里
+    
     basic_cost = base_hours * hourly_cost
     overtime_cost = overtime_hours * 300
     over_km_cost = over_km * 12
     total_vehicle_cost = basic_cost + overtime_cost + over_km_cost
-    total_time = (base_hours + overtime_hours) * 60
+    total_time = base_minutes + overtime_minutes  # 直接用分钟
+    
     return {
         'vehicle_cost': total_vehicle_cost,
-        'time_duration': total_time,
+        'time_duration': total_time,  # 现在是合理的35-75分钟
         'basic_cost': basic_cost,
         'overtime_cost': overtime_cost,
         'over_km_cost': over_km_cost,
         'distance_km': 15.0,
         'standard_distance': 15,
         'area_type': '专线',
-        'amount': np.random.uniform(5000000, 20000000)  # 仅用于展示
-        # 不再返回 labor_cost
+        'amount': np.random.uniform(5000000, 20000000)
     }
 
-# 在现有的generate_sample_data函数之前添加以下代码
 
 # 浦东周浦到上海各区实际距离数据（重新核实修正版）
 def get_pudong_zhoupu_to_districts_distance():
@@ -476,8 +484,13 @@ def generate_sample_data():
     
     for i in range(n_records):
         if business_type_list[i] == '金库调拨':
-            region = '浦东新区'
-            actual_distance = 15.0
+            region_list.append('浦东新区')
+            distance_list.append(15.0)
+            # 修正这里的时间计算
+            base_minutes = np.random.uniform(35, 50)  # 35-50分钟基础时间
+            overtime_minutes = np.random.uniform(10, 25) if np.random.random() < 0.15 else 0
+            total_minutes = base_minutes + overtime_minutes
+            time_duration_list.append(total_minutes)  # 现在是35-75分钟，合理范围
         else:
             region = np.random.choice(regions)
             actual_distance = distance_data[region]
@@ -1835,6 +1848,7 @@ with col3:
 # 自动刷新（可选）
 # time.sleep(60)  # 60秒后自动刷新
 # st.rerun()
+
 
 
 
