@@ -446,9 +446,9 @@ def calculate_over_distance_cost(actual_distance, standard_distance, business_ty
     
     # 超距离费率（元/公里）
     over_distance_rate = {
-        '金库运送': 15,    # 从周浦出发超距离费率
+        '金库运送': 12,    # 从周浦出发超距离费率
         '上门收款': 12,    # 从周浦出发超距离费率
-        '金库调拨': 18,    # 金库调拨超距离费率最高
+        '金库调拨': 12,    # 金库调拨超距离费率最高
         '现金清点': 0      # 现金清点无距离费用
     }.get(business_type, 15)
     
@@ -729,7 +729,7 @@ st.markdown("""
 
 # 生成数据
 df = generate_sample_data()
-historical_df = generate_historical_data(10)
+historical_df = generate_extended_historical_data(10)
 cost_optimization = analyze_cost_optimization(df)
 
 # 核心指标展示 - 第一行4个指标
@@ -1936,6 +1936,7 @@ with col3:
 # 自动刷新（可选）
 # time.sleep(60)  # 60秒后自动刷新
 # st.rerun()
+
 
 
 
