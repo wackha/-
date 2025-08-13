@@ -1244,80 +1244,70 @@ cost_optimization = analyze_cost_optimization(df)
 st.markdown('<div class="layer-container">', unsafe_allow_html=True)
 st.markdown('<h2 class="layer-title">📊 第一层：业务成本实时监控与可视化分析</h2>', unsafe_allow_html=True)
 
-col1, col2, col3, col4 = st.columns(4)
+st.metric(
+    label="📊 业务总量",
+    value=f"{len(df):,}",
+    delta=f"+{np.random.randint(5, 25)}"
+)
 
-with col1:
-    st.metric(
-        label="📊 业务总量",
-        value=f"{len(df):,}",
-        delta=f"+{np.random.randint(5, 25)}"
-    )
+total_cost = df['total_cost'].sum()
+st.metric(
+    label="💰 总成本",
+    value=f"¥{total_cost:,.0f}",
+    delta=f"{np.random.uniform(-5, 15):+.1f}%"
+)
 
-with col2:
-    total_cost = df['total_cost'].sum()
-    st.metric(
-        label="💰 总成本",
-        value=f"¥{total_cost:,.0f}",
-        delta=f"{np.random.uniform(-5, 15):+.1f}%"
-    )
+avg_efficiency = df['efficiency_ratio'].mean()
+st.metric(
+    label="⚡ 运营效率",
+    value=f"{avg_efficiency:.3f}",
+    delta=f"{np.random.uniform(-2, 8):+.1f}%"
+)
 
-with col3:
-    avg_efficiency = df['efficiency_ratio'].mean()
-    st.metric(
-        label="⚡ 运营效率",
-        value=f"{avg_efficiency:.3f}",
-        delta=f"{np.random.uniform(-2, 8):+.1f}%"
-    )
-
-with col4:
-    anomaly_rate = df['is_anomaly'].mean() * 100
-    st.metric(
-        label="🚨 异常监控",
-        value=f"{anomaly_rate:.1f}%",
-        delta=f"{np.random.uniform(-1, 3):+.1f}%"
-    )
+anomaly_rate = df['is_anomaly'].mean() * 100
+st.metric(
+    label="🚨 异常监控",
+    value=f"{anomaly_rate:.1f}%",
+    delta=f"{np.random.uniform(-1, 3):+.1f}%"
+)
 
 # 多维度图表分析与实时可视化组件
 st.subheader("📈 核心业务场景多维度可视化分析")
 
 # 实时业务成本分布 - 多维度展示
-col1, col2 = st.columns(2)
+# 业务类型成本实时分布 - 旭日图展示金库运送、上门收款、金库调拨、现金清点
+fig_business = px.sunburst(
+    df, 
+    path=['business_type', 'region'], 
+    values='total_cost',
+    title="金库运送/上门收款/金库调拨/现金清点 - 业务成本分布",
+    color='total_cost',
+    color_continuous_scale='Viridis'
+)
+fig_business.update_layout(
+    paper_bgcolor='white',
+    plot_bgcolor='white',
+    font_color='black'
+)
+st.plotly_chart(fig_business, use_container_width=True, key="layer1_business_sunburst")
 
-with col1:
-    # 业务类型成本实时分布 - 旭日图展示金库运送、上门收款、金库调拨、现金清点
-    fig_business = px.sunburst(
-        df, 
-        path=['business_type', 'region'], 
-        values='total_cost',
-        title="金库运送/上门收款/金库调拨/现金清点 - 业务成本分布",
-        color='total_cost',
-        color_continuous_scale='Viridis'
-    )
-    fig_business.update_layout(
-        paper_bgcolor='white',
-        plot_bgcolor='white',
-        font_color='black'
-    )
-    st.plotly_chart(fig_business, use_container_width=True, key="layer1_business_sunburst")
+# 实时数据表格 - 关键指标展示
+st.write("**实时数据表格 - 核心业务监控**")
 
-with col2:
-    # 实时数据表格 - 关键指标展示
-    st.write("**实时数据表格 - 核心业务监控**")
-    
-    # 按业务类型汇总关键指标
-    business_summary = df.groupby('business_type').agg({
-        'total_cost': ['sum', 'mean'],
-        'efficiency_ratio': 'mean',
-        'is_anomaly': 'mean',
-        'distance_km': 'mean',
-        'time_duration': 'mean'
-    }).round(2)
-    
-    business_summary.columns = ['总成本', '平均成本', '平均效率', '异常率', '平均距离', '平均时长']
-    business_summary['异常率'] = (business_summary['异常率'] * 100).round(1).astype(str) + '%'
-    business_summary['平均效率'] = (business_summary['平均效率'] * 100).round(1).astype(str) + '%'
-    
-    st.dataframe(business_summary, use_container_width=True)
+# 按业务类型汇总关键指标
+business_summary = df.groupby('business_type').agg({
+    'total_cost': ['sum', 'mean'],
+    'efficiency_ratio': 'mean',
+    'is_anomaly': 'mean',
+    'distance_km': 'mean',
+    'time_duration': 'mean'
+}).round(2)
+
+business_summary.columns = ['总成本', '平均成本', '平均效率', '异常率', '平均距离', '平均时长']
+business_summary['异常率'] = (business_summary['异常率'] * 100).round(1).astype(str) + '%'
+business_summary['平均效率'] = (business_summary['平均效率'] * 100).round(1).astype(str) + '%'
+
+st.dataframe(business_summary, use_container_width=True)
 
 # 动态展示业务总量、总成本、异常监控、运营效率的趋势图
 st.subheader("📊 关键指标动态趋势监控")
@@ -1384,165 +1374,157 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('<div class="layer-container">', unsafe_allow_html=True)
 st.markdown('<h2 class="layer-title">🔍 第二层：动态数据驱动的成本分摊优化</h2>', unsafe_allow_html=True)
 
-# 左侧：多维度图表分析
-col1, col2 = st.columns([3, 2])
+# 多维度图表分析
+st.subheader("📈 多维度业务分析")
 
-with col1:
-    st.subheader("📈 多维度业务分析")
-    
-    tab1, tab2, tab3 = st.tabs(["业务类型分布", "时段趋势分析", "区域成本热力图"])
-    
-    with tab1:
-        business_costs = df.groupby('business_type')['total_cost'].sum().reset_index()
-        business_costs['display_name'] = business_costs['business_type'].apply(
-            lambda x: f"{x} (浦东→浦西)" if x == '金库调拨' else x
-        )
-        
-        fig_pie = px.pie(
-            business_costs, 
-            values='total_cost', 
-            names='display_name',
-            title="各业务类型成本占比分析",
-            color_discrete_sequence=['#007bff', '#28a745', '#ffc107', '#dc3545']
-        )
-        fig_pie.update_layout(
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            font_color='black'
-        )
-        st.plotly_chart(fig_pie, use_container_width=True, key="layer2_business_pie")
-    
-    with tab2:
-        df['hour'] = df['start_time'].dt.hour
-        hourly_costs = df.groupby('hour')['total_cost'].mean().reset_index()
-        fig_line = px.line(
-            hourly_costs, 
-            x='hour', 
-            y='total_cost',
-            title="24小时成本变化趋势",
-            markers=True
-        )
-        fig_line.update_traces(
-            line_color='#007bff',
-            marker_color='#0056b3',
-            marker_size=8
-        )
-        fig_line.update_layout(
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            font_color='black'
-        )
-        st.plotly_chart(fig_line, use_container_width=True, key="layer2_hourly_line")
-    
-    with tab3:
-        # 上海16区成本热力图
-        region_costs = df.groupby('region')['total_cost'].mean().reset_index()
-        fig_heatmap = px.bar(
-            region_costs, 
-            x='region', 
-            y='total_cost',
-            title="上海16区平均成本分布",
-            color='total_cost',
-            color_continuous_scale='Viridis'
-        )
-        fig_heatmap.update_layout(
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            font_color='black',
-            xaxis_tickangle=45
-        )
-        st.plotly_chart(fig_heatmap, use_container_width=True, key="layer2_region_heatmap")
+tab1, tab2, tab3 = st.tabs(["业务类型分布", "时段趋势分析", "区域成本热力图"])
 
-# 右侧：市场冲击场景分布 + 动态权重配置
-with col2:
-    st.subheader("🌊 市场冲击场景分布")
-    scenario_counts = df['market_scenario'].value_counts()
-    fig_scenario = px.pie(
-        values=scenario_counts.values,
-        names=scenario_counts.index,
-        title="当前市场场景分布",
-        color_discrete_sequence=['#007bff', '#28a745', '#dc3545', '#17a2b8']
+with tab1:
+    business_costs = df.groupby('business_type')['total_cost'].sum().reset_index()
+    business_costs['display_name'] = business_costs['business_type'].apply(
+        lambda x: f"{x} (浦东→浦西)" if x == '金库调拨' else x
     )
-    fig_scenario.update_layout(
+    
+    fig_pie = px.pie(
+        business_costs, 
+        values='total_cost', 
+        names='display_name',
+        title="各业务类型成本占比分析",
+        color_discrete_sequence=['#007bff', '#28a745', '#ffc107', '#dc3545']
+    )
+    fig_pie.update_layout(
         paper_bgcolor='white',
         plot_bgcolor='white',
         font_color='black'
     )
-    st.plotly_chart(fig_scenario, use_container_width=True, key="layer2_scenario_pie")
-    
-    st.subheader("⚡ 动态权重配置")
-    time_weights = cost_optimization['time_weights']
-    fig_weights = px.bar(
-        x=list(time_weights.keys()),
-        y=list(time_weights.values()),
-        title="时段成本权重动态配置",
-        color=list(time_weights.values()),
+    st.plotly_chart(fig_pie, use_container_width=True, key="layer2_business_pie")
+
+with tab2:
+    df['hour'] = df['start_time'].dt.hour
+    hourly_costs = df.groupby('hour')['total_cost'].mean().reset_index()
+    fig_line = px.line(
+        hourly_costs, 
+        x='hour', 
+        y='total_cost',
+        title="24小时成本变化趋势",
+        markers=True
+    )
+    fig_line.update_traces(
+        line_color='#007bff',
+        marker_color='#0056b3',
+        marker_size=8
+    )
+    fig_line.update_layout(
+        paper_bgcolor='white',
+        plot_bgcolor='white',
+        font_color='black'
+    )
+    st.plotly_chart(fig_line, use_container_width=True, key="layer2_hourly_line")
+
+with tab3:
+    # 上海16区成本热力图
+    region_costs = df.groupby('region')['total_cost'].mean().reset_index()
+    fig_heatmap = px.bar(
+        region_costs, 
+        x='region', 
+        y='total_cost',
+        title="上海16区平均成本分布",
+        color='total_cost',
         color_continuous_scale='Viridis'
     )
-    fig_weights.update_layout(
+    fig_heatmap.update_layout(
         paper_bgcolor='white',
         plot_bgcolor='white',
         font_color='black',
-        xaxis_title="时段",
-        yaxis_title="成本权重系数"
+        xaxis_tickangle=45
     )
-    st.plotly_chart(fig_weights, use_container_width=True, key="layer2_weights_bar")
+    st.plotly_chart(fig_heatmap, use_container_width=True, key="layer2_region_heatmap")
+
+# 市场冲击场景分布
+st.subheader("🌊 市场冲击场景分布")
+scenario_counts = df['market_scenario'].value_counts()
+fig_scenario = px.pie(
+    values=scenario_counts.values,
+    names=scenario_counts.index,
+    title="当前市场场景分布",
+    color_discrete_sequence=['#007bff', '#28a745', '#dc3545', '#17a2b8']
+)
+fig_scenario.update_layout(
+    paper_bgcolor='white',
+    plot_bgcolor='white',
+    font_color='black'
+)
+st.plotly_chart(fig_scenario, use_container_width=True, key="layer2_scenario_pie")
+
+st.subheader("⚡ 动态权重配置")
+time_weights = cost_optimization['time_weights']
+fig_weights = px.bar(
+    x=list(time_weights.keys()),
+    y=list(time_weights.values()),
+    title="时段成本权重动态配置",
+    color=list(time_weights.values()),
+    color_continuous_scale='Viridis'
+)
+fig_weights.update_layout(
+    paper_bgcolor='white',
+    plot_bgcolor='white',
+    font_color='black',
+    xaxis_title="时段",
+    yaxis_title="成本权重系数"
+)
+st.plotly_chart(fig_weights, use_container_width=True, key="layer2_weights_bar")
 
 # 动态数据模拟器 - 构建7-10天历史数据分析
 st.subheader("🔄 动态数据模拟器 - 历史数据驱动分析")
 
-col_sim1, col_sim2 = st.columns(2)
+# 7-10天历史业务量变化
+daily_historical = historical_df.groupby('date').agg({
+    'total_cost': 'sum',
+    'business_type': 'count',
+    'efficiency_ratio': 'mean'
+}).reset_index()
+daily_historical.columns = ['date', 'total_cost', 'business_count', 'avg_efficiency']
 
-with col_sim1:
-    # 7-10天历史业务量变化
-    daily_historical = historical_df.groupby('date').agg({
-        'total_cost': 'sum',
-        'business_type': 'count',
-        'efficiency_ratio': 'mean'
-    }).reset_index()
-    daily_historical.columns = ['date', 'total_cost', 'business_count', 'avg_efficiency']
-    
-    fig_historical = go.Figure()
-    fig_historical.add_trace(go.Scatter(
-        x=daily_historical['date'], 
-        y=daily_historical['business_count'],
-        mode='lines+markers',
-        name='业务量',
-        line=dict(color='#007bff', width=3),
-        marker=dict(size=8)
-    ))
-    
-    fig_historical.update_layout(
-        title="7-10天历史业务量动态变化",
-        xaxis_title="日期",
-        yaxis_title="业务笔数",
-        paper_bgcolor='white',
-        plot_bgcolor='white',
-        font_color='black'
-    )
-    st.plotly_chart(fig_historical, use_container_width=True, key="layer2_historical_line")
+fig_historical = go.Figure()
+fig_historical.add_trace(go.Scatter(
+    x=daily_historical['date'], 
+    y=daily_historical['business_count'],
+    mode='lines+markers',
+    name='业务量',
+    line=dict(color='#007bff', width=3),
+    marker=dict(size=8)
+))
 
-with col_sim2:
-    # 不同时段业务量变化动态模拟
-    time_factor_analysis = df.groupby('time_weight').agg({
-        'total_cost': ['mean', 'count'],
-        'efficiency_ratio': 'mean'
-    }).round(2)
-    
-    time_factor_analysis.columns = ['平均成本', '业务量', '平均效率']
-    time_factor_analysis.index = ['正常时段(1.0)', '忙碌时段(1.1)', '高峰时段(1.3)', '特殊时段(1.6)']
-    
-    st.write("**时间因素动态调整分析**")
-    st.dataframe(time_factor_analysis, use_container_width=True)
-    
-    # 成本权重动态优化建议
-    st.write("**动态成本分摊策略优化**")
-    st.write(f"""
-    - 人工成本权重调整: {np.random.uniform(0.8, 1.2):.2f}
-    - 运输距离成本权重: {np.random.uniform(0.9, 1.3):.2f}  
-    - 设备成本权重调整: {np.random.uniform(0.7, 1.1):.2f}
-    - 节假日成本权重: {cost_optimization['time_weights']['节假日']}
-    """)
+fig_historical.update_layout(
+    title="7-10天历史业务量动态变化",
+    xaxis_title="日期",
+    yaxis_title="业务笔数",
+    paper_bgcolor='white',
+    plot_bgcolor='white',
+    font_color='black'
+)
+st.plotly_chart(fig_historical, use_container_width=True, key="layer2_historical_line")
+
+# 不同时段业务量变化动态模拟
+time_factor_analysis = df.groupby('time_weight').agg({
+    'total_cost': ['mean', 'count'],
+    'efficiency_ratio': 'mean'
+}).round(2)
+
+time_factor_analysis.columns = ['平均成本', '业务量', '平均效率']
+time_factor_analysis.index = ['正常时段(1.0)', '忙碌时段(1.1)', '高峰时段(1.3)', '特殊时段(1.6)']
+
+st.write("**时间因素动态调整分析**")
+st.dataframe(time_factor_analysis, use_container_width=True)
+
+# 成本权重动态优化建议
+st.write("**动态成本分摊策略优化**")
+st.write(f"""
+- 人工成本权重调整: {np.random.uniform(0.8, 1.2):.2f}
+- 运输距离成本权重: {np.random.uniform(0.9, 1.3):.2f}  
+- 设备成本权重调整: {np.random.uniform(0.7, 1.1):.2f}
+- 节假日成本权重: {cost_optimization['time_weights']['节假日']}
+""")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1550,180 +1532,171 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('<div class="layer-container">', unsafe_allow_html=True)
 st.markdown('<h2 class="layer-title">🎯 第三层：市场冲击模拟与预警机制</h2>', unsafe_allow_html=True)
 
-col1, col2 = st.columns(2)
+# 多层次预警机制
+st.subheader("🚨 多层次预警机制")
 
-# 左下角：多层次预警机制
-with col1:
-    st.subheader("🚨 多层次预警机制")
-    
-    # 风险评估
-    high_cost_threshold = df['total_cost'].quantile(0.9)
-    high_cost_businesses = df[df['total_cost'] > high_cost_threshold]
-    
-    # 预警级别计算
-    risk_level = "低风险"
-    risk_color = "#28a745"
-    if len(high_cost_businesses) > len(df) * 0.15:
-        risk_level = "高风险"
-        risk_color = "#dc3545"
-    elif len(high_cost_businesses) > len(df) * 0.10:
-        risk_level = "中风险"
-        risk_color = "#ffc107"
-    
-    st.markdown(f"""
-    <div style='
-        background: {risk_color};
-        color: white;
-        padding: 20px;
-        border-radius: 10px;
-        text-align: center;
-        margin: 10px 0;
-    '>
-        <h3>当前风险等级: {risk_level}</h3>
-        <p>高成本业务: {len(high_cost_businesses)} 笔 ({len(high_cost_businesses)/len(df)*100:.1f}%)</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # 风险分布图
-    if len(high_cost_businesses) > 0:
-        risk_by_type = high_cost_businesses['business_type'].value_counts()
-        fig_risk = px.bar(
-            x=risk_by_type.index,
-            y=risk_by_type.values,
-            title="高风险业务类型分布",
-            color_discrete_sequence=['#dc3545']
+# 风险评估
+high_cost_threshold = df['total_cost'].quantile(0.9)
+high_cost_businesses = df[df['total_cost'] > high_cost_threshold]
+
+# 预警级别计算
+risk_level = "低风险"
+risk_color = "#28a745"
+if len(high_cost_businesses) > len(df) * 0.15:
+    risk_level = "高风险"
+    risk_color = "#dc3545"
+elif len(high_cost_businesses) > len(df) * 0.10:
+    risk_level = "中风险"
+    risk_color = "#ffc107"
+
+st.markdown(f"""
+<div style='
+    background: {risk_color};
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    margin: 10px 0;
+    <h3>当前风险等级: {risk_level}</h3>
+    <p>高成本业务: {len(high_cost_businesses)} 笔 ({len(high_cost_businesses)/len(df)*100:.1f}%)</p>
+</div>
+""", unsafe_allow_html=True)
+
+# 风险分布图
+if len(high_cost_businesses) > 0:
+    risk_by_type = high_cost_businesses['business_type'].value_counts()
+    fig_risk = px.bar(
+        x=risk_by_type.index,
+        y=risk_by_type.values,
+        title="高风险业务类型分布",
+        color_discrete_sequence=['#dc3545']
+    )
+    fig_risk.update_layout(
+        paper_bgcolor='white',
+        plot_bgcolor='white',
+        font_color='black'
+    )
+    st.plotly_chart(fig_risk, use_container_width=True, key="layer3_risk_bar")
+
+# 预警配置
+st.subheader("⚙️ 预警参数配置")
+warning_threshold = st.slider("成本预警阈值(百分位)", 80, 95, 90)
+alert_threshold = st.slider("紧急预警阈值(百分位)", 90, 99, 95)
+
+# 蒙特卡洛优化模拟
+st.subheader("🔄 蒙特卡洛优化模拟")
+
+optimization_potential = cost_optimization['optimization_potential'] * 100
+st.markdown(f"""
+<div style='
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border-radius: 15px;
+    padding: 25px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+    margin: 10px 0;
+'>
+    <h3>🎯 优化潜力分析</h3>
+    <h1 style='font-size: 2.5rem; margin: 10px 0;'>{optimization_potential:.1f}%</h1>
+    <p>预计节约 ¥{total_cost * cost_optimization['cost_reduction_estimate']:,.0f}</p>
+</div>
+""", unsafe_allow_html=True)
+
+# 10万次迭代按钮
+if st.button("▶️ 启动10万次迭代优化", key="monte_carlo_layer3"):
+    with st.spinner("正在运行10万次蒙特卡洛模拟..."):
+        optimization_results, detailed_results = run_monte_carlo_optimization(100000)
+        
+        total_savings = optimization_results['total_optimization']['mean']
+        
+        # 显示优化结果
+        fig_opt_dist = px.histogram(
+            detailed_results, 
+            x='total_percentage',
+            title=f"10万次模拟：总体优化效果分布",
+            nbins=50,
+            color_discrete_sequence=['#28a745']
         )
-        fig_risk.update_layout(
+        fig_opt_dist.add_vline(
+            x=total_savings, 
+            line_dash="dash", 
+            line_color="red",
+            annotation_text=f"平均: {total_savings:.1f}%"
+        )
+        fig_opt_dist.update_layout(
             paper_bgcolor='white',
             plot_bgcolor='white',
             font_color='black'
         )
-        st.plotly_chart(fig_risk, use_container_width=True, key="layer3_risk_bar")
-    
-    # 预警配置
-    st.subheader("⚙️ 预警参数配置")
-    warning_threshold = st.slider("成本预警阈值(百分位)", 80, 95, 90)
-    alert_threshold = st.slider("紧急预警阈值(百分位)", 90, 99, 95)
+        st.plotly_chart(fig_opt_dist, use_container_width=True, key="layer3_monte_carlo_histogram")
+        
+        st.success(f"✅ 模拟完成：成本节约潜力 {total_savings:.1f}%")
 
-# 右上角：蒙特卡洛优化
-with col2:
-    st.subheader("🔄 蒙特卡洛优化模拟")
-    
-    optimization_potential = cost_optimization['optimization_potential'] * 100
-    st.markdown(f"""
-    <div style='
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        border-radius: 15px;
-        padding: 25px;
-        text-align: center;
-        color: white;
-        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
-        margin: 10px 0;
-    '>
-        <h3>🎯 优化潜力分析</h3>
-        <h1 style='font-size: 2.5rem; margin: 10px 0;'>{optimization_potential:.1f}%</h1>
-        <p>预计节约 ¥{total_cost * cost_optimization['cost_reduction_estimate']:,.0f}</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # 10万次迭代按钮
-    if st.button("▶️ 启动10万次迭代优化", key="monte_carlo_layer3"):
-        with st.spinner("正在运行10万次蒙特卡洛模拟..."):
-            optimization_results, detailed_results = run_monte_carlo_optimization(100000)
-            
-            total_savings = optimization_results['total_optimization']['mean']
-            
-            # 显示优化结果
-            fig_opt_dist = px.histogram(
-                detailed_results, 
-                x='total_percentage',
-                title=f"10万次模拟：总体优化效果分布",
-                nbins=50,
-                color_discrete_sequence=['#28a745']
-            )
-            fig_opt_dist.add_vline(
-                x=total_savings, 
-                line_dash="dash", 
-                line_color="red",
-                annotation_text=f"平均: {total_savings:.1f}%"
-            )
-            fig_opt_dist.update_layout(
-                paper_bgcolor='white',
-                plot_bgcolor='white',
-                font_color='black'
-            )
-            st.plotly_chart(fig_opt_dist, use_container_width=True, key="layer3_monte_carlo_histogram")
-            
-            st.success(f"✅ 模拟完成：成本节约潜力 {total_savings:.1f}%")
-    
-    # 优化策略选择
-    st.subheader("🎯 优化策略选择")
-    optimization_focus = st.selectbox(
-        "优化重点",
-        ["全面优化", "路线优化", "排班优化", "风险控制"],
-        key="optimization_focus"
-    )
-    
-    if optimization_focus == "路线优化":
-        st.info("🗺️ 重点优化运输路线，预计节约5-15%成本")
-    elif optimization_focus == "排班优化":
-        st.info("👥 重点优化人员排班，预计节约3-12%成本")
-    elif optimization_focus == "风险控制":
-        st.info("🛡️ 重点控制风险因素，预计节约2-8%成本")
-    else:
-        st.info("🎯 全面优化所有环节，预计节约8-25%成本")
+# 优化策略选择
+st.subheader("🎯 优化策略选择")
+optimization_focus = st.selectbox(
+    "优化重点",
+    ["全面优化", "路线优化", "排班优化", "风险控制"],
+    key="optimization_focus"
+)
+
+if optimization_focus == "路线优化":
+    st.info("🗺️ 重点优化运输路线，预计节约5-15%成本")
+elif optimization_focus == "排班优化":
+    st.info("👥 重点优化人员排班，预计节约3-12%成本")
+elif optimization_focus == "风险控制":
+    st.info("🛡️ 重点控制风险因素，预计节约2-8%成本")
+else:
+    st.info("🎯 全面优化所有环节，预计节约8-25%成本")
 
 # 高需求期、紧急状况、节假日等市场冲击场景模拟
 st.subheader("🌊 市场冲击场景深度模拟")
 
-col_shock1, col_shock2 = st.columns(2)
+# 市场冲击场景影响分析
+scenario_impact = df.groupby('market_scenario').agg({
+    'total_cost': ['mean', 'count'],
+    'efficiency_ratio': 'mean',
+    'is_anomaly': 'mean'
+}).round(3)
 
-with col_shock1:
-    # 市场冲击场景影响分析
-    scenario_impact = df.groupby('market_scenario').agg({
-        'total_cost': ['mean', 'count'],
-        'efficiency_ratio': 'mean',
-        'is_anomaly': 'mean'
-    }).round(3)
-    
-    scenario_impact.columns = ['平均成本', '业务量', '平均效率', '异常率']
-    scenario_impact.index = ['高需求期', '节假日', '紧急状况', '正常']
-    
-    st.write("**各市场场景成本结构影响**")
-    st.dataframe(scenario_impact, use_container_width=True)
+scenario_impact.columns = ['平均成本', '业务量', '平均效率', '异常率']
+scenario_impact.index = ['高需求期', '节假日', '紧急状况', '正常']
 
-with col_shock2:
-    # 实时预警机制 - 自动更新和手动刷新
-    st.write("**灵活成本监控方式**")
-    
-    monitoring_mode = st.radio(
-        "选择监控模式",
-        ["自动更新模式", "手动刷新模式"],
-        key="monitoring_mode"
-    )
-    
-    if monitoring_mode == "自动更新模式":
-        st.success("🔄 系统每60秒自动更新数据")
-        st.info("📊 实时监控成本变化趋势")
-    else:
-        if st.button("🔄 手动刷新数据", key="manual_refresh"):
-            st.success("✅ 数据已手动刷新")
-        st.info("👆 点击按钮手动刷新最新数据")
-    
-    # 实时评估不同市场环境对成本结构的影响
-    current_scenario_cost = df.groupby('market_scenario')['total_cost'].sum()
-    normal_cost = current_scenario_cost.get('正常', 0)
-    
-    if normal_cost > 0:
-        st.write("**市场环境成本影响评估**")
-        for scenario, cost in current_scenario_cost.items():
-            impact_pct = ((cost - normal_cost) / normal_cost * 100) if scenario != '正常' else 0
-            if impact_pct > 0:
-                st.write(f"- {scenario}: +{impact_pct:.1f}% 成本上升")
-            elif impact_pct < 0:
-                st.write(f"- {scenario}: {impact_pct:.1f}% 成本下降")
-            else:
-                st.write(f"- {scenario}: 基准成本水平")
+st.write("**各市场场景成本结构影响**")
+st.dataframe(scenario_impact, use_container_width=True)
+
+# 实时预警机制 - 自动更新和手动刷新
+st.write("**灵活成本监控方式**")
+
+monitoring_mode = st.radio(
+    "选择监控模式",
+    ["自动更新模式", "手动刷新模式"],
+    key="monitoring_mode"
+)
+
+if monitoring_mode == "自动更新模式":
+    st.success("🔄 系统每60秒自动更新数据")
+    st.info("📊 实时监控成本变化趋势")
+else:
+    if st.button("🔄 手动刷新数据", key="manual_refresh"):
+        st.success("✅ 数据已手动刷新")
+    st.info("👆 点击按钮手动刷新最新数据")
+
+# 实时评估不同市场环境对成本结构的影响
+current_scenario_cost = df.groupby('market_scenario')['total_cost'].sum()
+normal_cost = current_scenario_cost.get('正常', 0)
+
+if normal_cost > 0:
+    st.write("**市场环境成本影响评估**")
+    for scenario, cost in current_scenario_cost.items():
+        impact_pct = ((cost - normal_cost) / normal_cost * 100) if scenario != '正常' else 0
+        if impact_pct > 0:
+            st.write(f"- {scenario}: +{impact_pct:.1f}% 成本上升")
+        elif impact_pct < 0:
+            st.write(f"- {scenario}: {impact_pct:.1f}% 成本下降")
+        else:
+            st.write(f"- {scenario}: 基准成本水平")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1941,61 +1914,51 @@ st.plotly_chart(fig_accuracy, use_container_width=True, key="prediction_accuracy
 # 详细数据表格展示功能 - 分类显示正常业务数据和异常业务数据
 st.subheader("📋 详细数据表格展示功能")
 
-col_table1, col_table2 = st.columns(2)
+st.write("**正常业务数据展示**")
+normal_business = df[~df['is_anomaly']].copy()
 
-with col_table1:
-    st.write("**正常业务数据展示**")
-    normal_business = df[~df['is_anomaly']].copy()
-    
-    # 显示正常业务的关键列
-    normal_display = normal_business[['txn_id', 'business_type', 'region', 'total_cost', 
-                                    'efficiency_ratio', 'distance_km', 'time_duration']].head(10)
-    normal_display.columns = ['交易ID', '业务类型', '区域', '总成本', '效率比', '距离(km)', '时长(分钟)']
-    st.dataframe(normal_display, use_container_width=True)
-    
-    st.info(f"✅ 正常业务数据: {len(normal_business):,} 条")
+# 显示正常业务的关键列
+normal_display = normal_business[['txn_id', 'business_type', 'region', 'total_cost', 
+                                'efficiency_ratio', 'distance_km', 'time_duration']].head(10)
+normal_display.columns = ['交易ID', '业务类型', '区域', '总成本', '效率比', '距离(km)', '时长(分钟)']
+st.dataframe(normal_display, use_container_width=True)
 
-with col_table2:
-    st.write("**异常业务数据展示与标识**")
-    anomaly_business = df[df['is_anomaly']].copy()
+st.info(f"✅ 正常业务数据: {len(normal_business):,} 条")
+
+st.write("**异常业务数据展示与标识**")
+anomaly_business = df[df['is_anomaly']].copy()
+
+if len(anomaly_business) > 0:
+    # 异常数据标识处理
+    anomaly_display = anomaly_business[['txn_id', 'business_type', 'region', 'total_cost', 
+                                      'efficiency_ratio', 'distance_km', 'time_duration']].head(10)
+    anomaly_display.columns = ['交易ID', '业务类型', '区域', '总成本', '效率比', '距离(km)', '时长(分钟)']
     
-    if len(anomaly_business) > 0:
-        # 异常数据标识处理
-        anomaly_display = anomaly_business[['txn_id', 'business_type', 'region', 'total_cost', 
-                                          'efficiency_ratio', 'distance_km', 'time_duration']].head(10)
-        anomaly_display.columns = ['交易ID', '业务类型', '区域', '总成本', '效率比', '距离(km)', '时长(分钟)']
-        
-        # 对异常数据进行标识
-        styled_anomaly = anomaly_display.style.applymap(
-            lambda x: 'background-color: #ffebee' if isinstance(x, (int, float)) else ''
-        )
-        st.dataframe(styled_anomaly, use_container_width=True)
-        
-        st.warning(f"⚠️ 异常业务数据: {len(anomaly_business):,} 条 (需重点关注)")
-    else:
-        st.success("✅ 当前无异常业务数据")
+    # 对异常数据进行标识
+    styled_anomaly = anomaly_display.style.applymap(
+        lambda x: 'background-color: #ffebee' if isinstance(x, (int, float)) else ''
+    )
+    st.dataframe(styled_anomaly, use_container_width=True)
+    
+    st.warning(f"⚠️ 异常业务数据: {len(anomaly_business):,} 条 (需重点关注)")
+else:
+    st.success("✅ 当前无异常业务数据")
 
 # 系统自动计算异常数据的特征指标
 if len(anomaly_business) > 0:
     st.subheader("🔍 异常数据特征指标分析")
     
-    col_anomaly1, col_anomaly2, col_anomaly3, col_anomaly4 = st.columns(4)
+    avg_anomaly_cost = anomaly_business['total_cost'].mean()
+    st.metric("异常数据平均成本", f"¥{avg_anomaly_cost:,.0f}")
     
-    with col_anomaly1:
-        avg_anomaly_cost = anomaly_business['total_cost'].mean()
-        st.metric("异常数据平均成本", f"¥{avg_anomaly_cost:,.0f}")
+    max_anomaly_cost = anomaly_business['total_cost'].max()
+    st.metric("异常数据最高成本", f"¥{max_anomaly_cost:,.0f}")
     
-    with col_anomaly2:
-        max_anomaly_cost = anomaly_business['total_cost'].max()
-        st.metric("异常数据最高成本", f"¥{max_anomaly_cost:,.0f}")
+    avg_anomaly_time = anomaly_business['time_duration'].mean()
+    st.metric("异常数据平均时长", f"{avg_anomaly_time:.0f}分钟")
     
-    with col_anomaly3:
-        avg_anomaly_time = anomaly_business['time_duration'].mean()
-        st.metric("异常数据平均时长", f"{avg_anomaly_time:.0f}分钟")
-    
-    with col_anomaly4:
-        avg_anomaly_distance = anomaly_business['distance_km'].mean()
-        st.metric("异常数据平均距离", f"{avg_anomaly_distance:.1f}km")
+    avg_anomaly_distance = anomaly_business['distance_km'].mean()
+    st.metric("异常数据平均距离", f"{avg_anomaly_distance:.1f}km")
     
     # 异常数据对比分析
     st.write("**异常vs正常数据对比分析**")
@@ -2747,48 +2710,6 @@ validation_mode = st.selectbox(
     ["10万次迭代优化", "历史数据准确率", "周转效率优化", "ARIMA预测验证", "全面验证"], 
     key="validation_mode"
 )
-
-if validation_mode == "10万次迭代优化" or validation_mode == "全面验证":
-    st.subheader("🔄 10万次蒙特卡洛优化模拟")
-    
-    if st.button("▶️ 开始10万次迭代", key="start_monte_carlo"):
-        optimization_results, detailed_results = run_monte_carlo_optimization(100000)
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            route_savings = optimization_results['route_optimization']['mean']
-            st.metric(
-                "路线优化降本", 
-                f"{route_savings:.1f}%",
-                f"¥{optimization_results['route_optimization']['savings_amount']:.0f}"
-            )
-        
-        with col2:
-            schedule_savings = optimization_results['schedule_optimization']['mean']
-            st.metric(
-                "排班优化降本", 
-                f"{schedule_savings:.1f}%",
-                f"¥{optimization_results['schedule_optimization']['savings_amount']:.0f}"
-            )
-        
-        with col3:
-            risk_savings = optimization_results['risk_optimization']['mean']
-            st.metric(
-                "风险规避降本", 
-                f"{risk_savings:.1f}%",
-                f"¥{optimization_results['risk_optimization']['savings_amount']:.0f}"
-            )
-        
-        with col4:
-            total_savings = optimization_results['total_optimization']['mean']
-            st.metric(
-                "总体成本节约", 
-                f"{total_savings:.1f}%",
-                f"¥{optimization_results['total_optimization']['total_amount']:.0f}"
-            )
-        
-        st.success(f"✅ 基于{optimization_results['iterations']:,}次迭代验证：成本节约潜力 {total_savings:.1f}%")
 
 # 继续添加其他验证模式的完整代码
 
