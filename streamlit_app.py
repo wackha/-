@@ -1298,7 +1298,7 @@ with col1:
         plot_bgcolor='white',
         font_color='black'
     )
-    st.plotly_chart(fig_business, use_container_width=True)
+    st.plotly_chart(fig_business, use_container_width=True, key="layer1_business_sunburst")
 
 with col2:
     # 实时数据表格 - 关键指标展示
@@ -1376,7 +1376,7 @@ fig_trends.update_layout(
     font_color='black'
 )
 
-st.plotly_chart(fig_trends, use_container_width=True)
+st.plotly_chart(fig_trends, use_container_width=True, key="layer1_trends_subplot")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1410,7 +1410,7 @@ with col1:
             plot_bgcolor='white',
             font_color='black'
         )
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, use_container_width=True, key="layer2_business_pie")
     
     with tab2:
         df['hour'] = df['start_time'].dt.hour
@@ -1432,7 +1432,7 @@ with col1:
             plot_bgcolor='white',
             font_color='black'
         )
-        st.plotly_chart(fig_line, use_container_width=True)
+        st.plotly_chart(fig_line, use_container_width=True, key="layer2_hourly_line")
     
     with tab3:
         # 上海16区成本热力图
@@ -1451,7 +1451,7 @@ with col1:
             font_color='black',
             xaxis_tickangle=45
         )
-        st.plotly_chart(fig_heatmap, use_container_width=True)
+        st.plotly_chart(fig_heatmap, use_container_width=True, key="layer2_region_heatmap")
 
 # 右侧：市场冲击场景分布 + 动态权重配置
 with col2:
@@ -1468,7 +1468,7 @@ with col2:
         plot_bgcolor='white',
         font_color='black'
     )
-    st.plotly_chart(fig_scenario, use_container_width=True)
+    st.plotly_chart(fig_scenario, use_container_width=True, key="layer2_scenario_pie")
     
     st.subheader("⚡ 动态权重配置")
     time_weights = cost_optimization['time_weights']
@@ -1486,7 +1486,7 @@ with col2:
         xaxis_title="时段",
         yaxis_title="成本权重系数"
     )
-    st.plotly_chart(fig_weights, use_container_width=True)
+    st.plotly_chart(fig_weights, use_container_width=True, key="layer2_weights_bar")
 
 # 动态数据模拟器 - 构建7-10天历史数据分析
 st.subheader("🔄 动态数据模拟器 - 历史数据驱动分析")
@@ -1520,7 +1520,7 @@ with col_sim1:
         plot_bgcolor='white',
         font_color='black'
     )
-    st.plotly_chart(fig_historical, use_container_width=True)
+    st.plotly_chart(fig_historical, use_container_width=True, key="layer2_historical_line")
 
 with col_sim2:
     # 不同时段业务量变化动态模拟
@@ -1598,7 +1598,7 @@ with col1:
             plot_bgcolor='white',
             font_color='black'
         )
-        st.plotly_chart(fig_risk, use_container_width=True)
+        st.plotly_chart(fig_risk, use_container_width=True, key="layer3_risk_bar")
     
     # 预警配置
     st.subheader("⚙️ 预警参数配置")
@@ -1652,7 +1652,7 @@ with col2:
                 plot_bgcolor='white',
                 font_color='black'
             )
-            st.plotly_chart(fig_opt_dist, use_container_width=True)
+            st.plotly_chart(fig_opt_dist, use_container_width=True, key="layer3_monte_carlo_histogram")
             
             st.success(f"✅ 模拟完成：成本节约潜力 {total_savings:.1f}%")
     
@@ -1753,7 +1753,7 @@ fig_business.update_layout(
     height=500,  # 增加高度
     font_size=14  # 增加字体大小
 )
-st.plotly_chart(fig_business, use_container_width=True)
+st.plotly_chart(fig_business, use_container_width=True, key="business_costs_chart")
 
 # 第二个图表：区域成本热力图（单独一行）
 st.markdown("### 🗺️ 区域成本热力图")
@@ -1774,7 +1774,7 @@ fig_region.update_layout(
     font_size=14,  # 增加字体大小
     xaxis_tickangle=45
 )
-st.plotly_chart(fig_region, use_container_width=True)
+st.plotly_chart(fig_region, use_container_width=True, key="region_costs_chart")
 
 # 第三个图表：时段效率分析（单独一行）
 st.markdown("### ⚡ 时段效率分析")
@@ -1798,7 +1798,7 @@ fig_efficiency.update_layout(
     height=500,  # 增加高度
     font_size=14  # 增加字体大小
 )
-st.plotly_chart(fig_efficiency, use_container_width=True)
+st.plotly_chart(fig_efficiency, use_container_width=True, key="efficiency_trend_chart")
 
 # 第四个图表：距离成本关系（单独一行）
 st.markdown("### 📊 距离成本关系")
@@ -1819,9 +1819,7 @@ fig_scatter.update_layout(
     height=500,  # 增加高度
     font_size=14  # 增加字体大小
 )
-st.plotly_chart(fig_scatter, use_container_width=True)
-
-st.plotly_chart(fig_scatter, use_container_width=True)
+st.plotly_chart(fig_scatter, use_container_width=True, key="distance_cost_scatter_chart")
 
 # 第五个图表：异常数据分析（单独一行）
 st.markdown("### 🚨 异常数据分析")
@@ -1855,7 +1853,7 @@ fig_anomaly.update_layout(
     font_size=14,  # 增加字体大小
     barmode='overlay'
 )
-st.plotly_chart(fig_anomaly, use_container_width=True)
+st.plotly_chart(fig_anomaly, use_container_width=True, key="anomaly_analysis_chart")
 
 # 第六个图表：市场场景影响（单独一行）
 st.markdown("### 🌊 市场场景影响")
@@ -1875,7 +1873,7 @@ fig_scenario.update_layout(
     height=500,  # 增加高度
     font_size=14  # 增加字体大小
 )
-st.plotly_chart(fig_scenario, use_container_width=True)
+st.plotly_chart(fig_scenario, use_container_width=True, key="market_scenario_chart")
 
 # 第七个图表：成本构成分析（单独一行）
 st.markdown("### 💰 成本构成分析")
@@ -1908,7 +1906,7 @@ if len(avg_costs) > 0:
         height=500,  # 增加高度
         font_size=14  # 增加字体大小
     )
-    st.plotly_chart(fig_cost_pie, use_container_width=True)
+    st.plotly_chart(fig_cost_pie, use_container_width=True, key="cost_composition_pie_chart")
 else:
     st.info("成本构成数据不完整，无法生成饼图")
 
@@ -1938,7 +1936,7 @@ fig_accuracy.update_layout(
     xaxis_title="天数",
     yaxis_title="预测准确率"
 )
-st.plotly_chart(fig_accuracy, use_container_width=True)
+st.plotly_chart(fig_accuracy, use_container_width=True, key="prediction_accuracy_chart")
 
 # 详细数据表格展示功能 - 分类显示正常业务数据和异常业务数据
 st.subheader("📋 详细数据表格展示功能")
@@ -2066,7 +2064,7 @@ with col1:
         font_color='black',
         xaxis_tickangle=45
     )
-    st.plotly_chart(fig_heatmap, use_container_width=True)
+    st.plotly_chart(fig_heatmap, use_container_width=True, key="layer5_region_heatmap")
     
     # 区域详细数据
     st.write("**区域详细分析**")
@@ -2102,7 +2100,7 @@ with col2:
                 plot_bgcolor='white',
                 font_color='black'
             )
-            st.plotly_chart(fig_counting, use_container_width=True)
+            st.plotly_chart(fig_counting, use_container_width=True, key="layer5_counting_pie")
         
         # 关键指标
         col_c1, col_c2 = st.columns(2)
@@ -2136,7 +2134,7 @@ with col2:
             plot_bgcolor='white',
             font_color='black'
         )
-        st.plotly_chart(fig_breakdown, use_container_width=True)
+        st.plotly_chart(fig_breakdown, use_container_width=True, key="layer5_cost_breakdown")
     else:
         st.info("当前时段无现金清点业务")
 
@@ -2162,7 +2160,7 @@ with col3:
             plot_bgcolor='white',
             font_color='black'
         )
-        st.plotly_chart(fig_vault_cost, use_container_width=True)
+        st.plotly_chart(fig_vault_cost, use_container_width=True, key="layer5_vault_cost")
         
         # 关键指标
         col_v1, col_v2 = st.columns(2)
@@ -2189,7 +2187,7 @@ with col3:
             plot_bgcolor='white',
             font_color='black'
         )
-        st.plotly_chart(fig_time_dist, use_container_width=True)
+        st.plotly_chart(fig_time_dist, use_container_width=True, key="layer5_time_dist")
     else:
         st.info("当前时段无金库调拨业务")
 
@@ -2238,7 +2236,7 @@ with col4:
         plot_bgcolor='white',
         font_color='black'
     )
-    st.plotly_chart(fig_prediction, use_container_width=True)
+    st.plotly_chart(fig_prediction, use_container_width=True, key="layer5_arima_prediction")
     
     # 预测准确率和模型性能
     col_p1, col_p2 = st.columns(2)
@@ -2297,7 +2295,7 @@ with col_chart1:
         plot_bgcolor='white',
         font_color='black'
     )
-    st.plotly_chart(fig_eff_dist, use_container_width=True)
+    st.plotly_chart(fig_eff_dist, use_container_width=True, key="layer5_efficiency_dist")
 
 with col_chart2:
     # 效率vs成本散点图
@@ -2314,7 +2312,7 @@ with col_chart2:
         plot_bgcolor='white',
         font_color='black'
     )
-    st.plotly_chart(fig_eff_cost, use_container_width=True)
+    st.plotly_chart(fig_eff_cost, use_container_width=True, key="layer5_efficiency_cost")
 
 # 金库调拨专项深度分析
 st.subheader("🚛 金库调拨深度分析")
@@ -2427,7 +2425,7 @@ if len(counting_data) > 0:
                 plot_bgcolor='white',
                 font_color='black'
             )
-            st.plotly_chart(fig_count, use_container_width=True)
+            st.plotly_chart(fig_count, use_container_width=True, key="validation_count_chart")
         
         with col_comp2:
             fig_cost = px.bar(
@@ -2443,7 +2441,7 @@ if len(counting_data) > 0:
                 plot_bgcolor='white',
                 font_color='black'
             )
-            st.plotly_chart(fig_cost, use_container_width=True)
+            st.plotly_chart(fig_cost, use_container_width=True, key="validation_cost_chart")
 
 # 风险预警深度分析
 st.subheader("🚨 风险预警深度分析")
@@ -2587,7 +2585,7 @@ with tab2:
             plot_bgcolor='white',
             font_color='black'
         )
-        st.plotly_chart(fig_reasons, use_container_width=True)
+        st.plotly_chart(fig_reasons, use_container_width=True, key="validation_reasons_chart")
     else:
         st.info("当前没有检测到异常数据")
 
@@ -2611,7 +2609,7 @@ with tab3:
                 plot_bgcolor='white',
                 font_color='black'
             )
-            st.plotly_chart(fig_anomaly_dist, use_container_width=True)
+            st.plotly_chart(fig_anomaly_dist, use_container_width=True, key="validation_anomaly_dist")
         
         with col2:
             # 异常数据业务类型分布
@@ -2627,7 +2625,7 @@ with tab3:
                 plot_bgcolor='white',
                 font_color='black'
             )
-            st.plotly_chart(fig_anomaly_business, use_container_width=True)
+            st.plotly_chart(fig_anomaly_business, use_container_width=True, key="validation_anomaly_business")
         
         # 异常vs正常对比分析
         st.write("#### ⚖️ 异常vs正常业务对比")
@@ -2681,7 +2679,7 @@ with tab4:
             plot_bgcolor='white',
             font_color='black'
         )
-        st.plotly_chart(fig_hourly_cost, use_container_width=True)
+        st.plotly_chart(fig_hourly_cost, use_container_width=True, key="validation_hourly_cost")
     
     with col_trend2:
         fig_hourly_anomaly = px.line(
@@ -2696,7 +2694,7 @@ with tab4:
             plot_bgcolor='white',
             font_color='black'
         )
-        st.plotly_chart(fig_hourly_anomaly, use_container_width=True)
+        st.plotly_chart(fig_hourly_anomaly, use_container_width=True, key="validation_hourly_anomaly")
     
     # 业务量分布分析
     st.write("#### 📊 业务量分布分析")
@@ -2926,7 +2924,7 @@ if validation_mode == "ARIMA预测验证" or validation_mode == "全面验证":
                 legend=dict(x=0.02, y=0.98)
             )
             
-            st.plotly_chart(fig_comparison, use_container_width=True)
+            st.plotly_chart(fig_comparison, use_container_width=True, key="prediction_comparison")
             
             # 模型性能评估表
             st.write("### 📋 模型性能详细评估")
@@ -2974,7 +2972,7 @@ if validation_mode == "ARIMA预测验证" or validation_mode == "全面验证":
                     xaxis_title="预测误差",
                     yaxis_title="频次"
                 )
-                st.plotly_chart(fig_error_dist, use_container_width=True)
+                st.plotly_chart(fig_error_dist, use_container_width=True, key="prediction_error_dist")
             
             with col_error2:
                 # 误差随时间变化
@@ -2996,7 +2994,7 @@ if validation_mode == "ARIMA预测验证" or validation_mode == "全面验证":
                     xaxis_title="时间序列",
                     yaxis_title="预测误差"
                 )
-                st.plotly_chart(fig_error_time, use_container_width=True)
+                st.plotly_chart(fig_error_time, use_container_width=True, key="prediction_error_time")
 
 # 添加自定义验证模式
 if validation_mode == "自定义验证模式":
@@ -3134,7 +3132,7 @@ if validation_mode == "压力测试模式":
                     xaxis_title="数据量",
                     yaxis_title="处理时间(秒)"
                 )
-                st.plotly_chart(fig_performance, use_container_width=True)
+                st.plotly_chart(fig_performance, use_container_width=True, key="model_performance")
             
             avg_performance = np.mean([size/t for size, t in zip(data_sizes, processing_times)])
             st.success(f"✅ 压力测试完成：平均处理性能 {avg_performance:.0f} 记录/秒")
@@ -3177,7 +3175,7 @@ if validation_mode == "压力测试模式":
                     plot_bgcolor='white',
                     font_color='black'
                 )
-                st.plotly_chart(fig_complexity, use_container_width=True)
+                st.plotly_chart(fig_complexity, use_container_width=True, key="model_complexity")
             
             st.success("✅ 计算复杂度测试完成")
         
@@ -3258,7 +3256,7 @@ if validation_mode == "压力测试模式":
                     xaxis_title="测试步骤",
                     yaxis_title="内存使用(MB)"
                 )
-                st.plotly_chart(fig_memory, use_container_width=True)
+                st.plotly_chart(fig_memory, use_container_width=True, key="memory_usage")
             
             # 清理内存
             del large_datasets
