@@ -1733,215 +1733,212 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('<div class="layer-container">', unsafe_allow_html=True)
 st.markdown('<h2 class="layer-title">🏢 第四层：构建综合图表分析体系</h2>', unsafe_allow_html=True)
 
-# 分成四个独立的大区块，不使用复杂的子图布局
 st.subheader("📊 多维度成本数据可视化展示")
 
-# 第一行：两个大图表
-col1, col2 = st.columns(2)
+# 第一个图表：业务类型成本分布分析（单独一行）
+st.markdown("### 📈 业务类型成本分布分析")
+business_costs = df.groupby('business_type')['total_cost'].mean().reset_index()
+fig_business = px.bar(
+    business_costs, 
+    x='business_type', 
+    y='total_cost',
+    title="各业务类型平均成本对比",
+    color='total_cost',
+    color_continuous_scale='Viridis'
+)
+fig_business.update_layout(
+    paper_bgcolor='white',
+    plot_bgcolor='white',
+    font_color='black',
+    height=500,  # 增加高度
+    font_size=14  # 增加字体大小
+)
+st.plotly_chart(fig_business, use_container_width=True)
 
-with col1:
-    st.markdown("### 📈 业务类型成本分布分析")
-    business_costs = df.groupby('business_type')['total_cost'].mean().reset_index()
-    fig_business = px.bar(
-        business_costs, 
-        x='business_type', 
-        y='total_cost',
-        title="各业务类型平均成本对比",
-        color='total_cost',
-        color_continuous_scale='Viridis'
-    )
-    fig_business.update_layout(
-        paper_bgcolor='white',
-        plot_bgcolor='white',
-        font_color='black',
-        height=400
-    )
-    st.plotly_chart(fig_business, use_container_width=True)
+# 第二个图表：区域成本热力图（单独一行）
+st.markdown("### 🗺️ 区域成本热力图")
+region_costs = df.groupby('region')['total_cost'].mean().reset_index()
+fig_region = px.bar(
+    region_costs, 
+    x='region', 
+    y='total_cost',
+    title="上海各区域平均成本分布",
+    color='total_cost',
+    color_continuous_scale='Plasma'
+)
+fig_region.update_layout(
+    paper_bgcolor='white',
+    plot_bgcolor='white',
+    font_color='black',
+    height=500,  # 增加高度
+    font_size=14,  # 增加字体大小
+    xaxis_tickangle=45
+)
+st.plotly_chart(fig_region, use_container_width=True)
 
-with col2:
-    st.markdown("### 🗺️ 区域成本热力图")
-    region_costs = df.groupby('region')['total_cost'].mean().reset_index()
-    fig_region = px.bar(
-        region_costs, 
-        x='region', 
-        y='total_cost',
-        title="上海各区域平均成本分布",
-        color='total_cost',
-        color_continuous_scale='Plasma'
-    )
-    fig_region.update_layout(
-        paper_bgcolor='white',
-        plot_bgcolor='white',
-        font_color='black',
-        height=400,
-        xaxis_tickangle=45
-    )
-    st.plotly_chart(fig_region, use_container_width=True)
+# 第三个图表：时段效率分析（单独一行）
+st.markdown("### ⚡ 时段效率分析")
+hourly_efficiency = df.groupby('hour')['efficiency_ratio'].mean().reset_index()
+fig_efficiency = px.line(
+    hourly_efficiency, 
+    x='hour', 
+    y='efficiency_ratio',
+    title="24小时效率变化趋势",
+    markers=True
+)
+fig_efficiency.update_traces(
+    line_color='#28a745',
+    marker_color='#155724',
+    marker_size=10  # 增加标记大小
+)
+fig_efficiency.update_layout(
+    paper_bgcolor='white',
+    plot_bgcolor='white',
+    font_color='black',
+    height=500,  # 增加高度
+    font_size=14  # 增加字体大小
+)
+st.plotly_chart(fig_efficiency, use_container_width=True)
 
-# 第二行：两个大图表
-col3, col4 = st.columns(2)
+# 第四个图表：距离成本关系（单独一行）
+st.markdown("### 📊 距离成本关系")
+sample_data = df.sample(min(100, len(df)))  # 取样本避免图表过于密集
+fig_scatter = px.scatter(
+    sample_data, 
+    x='distance_km', 
+    y='total_cost',
+    color='business_type',
+    size='amount',
+    title="距离与成本关系分析",
+    hover_data=['efficiency_ratio']
+)
+fig_scatter.update_layout(
+    paper_bgcolor='white',
+    plot_bgcolor='white',
+    font_color='black',
+    height=500,  # 增加高度
+    font_size=14  # 增加字体大小
+)
+st.plotly_chart(fig_scatter, use_container_width=True)
 
-with col3:
-    st.markdown("### ⚡ 时段效率分析")
-    hourly_efficiency = df.groupby('hour')['efficiency_ratio'].mean().reset_index()
-    fig_efficiency = px.line(
-        hourly_efficiency, 
-        x='hour', 
-        y='efficiency_ratio',
-        title="24小时效率变化趋势",
-        markers=True
-    )
-    fig_efficiency.update_traces(
-        line_color='#28a745',
-        marker_color='#155724',
-        marker_size=8
-    )
-    fig_efficiency.update_layout(
-        paper_bgcolor='white',
-        plot_bgcolor='white',
-        font_color='black',
-        height=400
-    )
-    st.plotly_chart(fig_efficiency, use_container_width=True)
+st.plotly_chart(fig_scatter, use_container_width=True)
 
-with col4:
-    st.markdown("### 📊 距离成本关系")
-    sample_data = df.sample(min(100, len(df)))  # 取样本避免图表过于密集
-    fig_scatter = px.scatter(
-        sample_data, 
-        x='distance_km', 
-        y='total_cost',
-        color='business_type',
-        size='amount',
-        title="距离与成本关系分析",
-        hover_data=['efficiency_ratio']
-    )
-    fig_scatter.update_layout(
-        paper_bgcolor='white',
-        plot_bgcolor='white',
-        font_color='black',
-        height=400
-    )
-    st.plotly_chart(fig_scatter, use_container_width=True)
+# 第五个图表：异常数据分析（单独一行）
+st.markdown("### 🚨 异常数据分析")
+normal_data = df[~df['is_anomaly']]
+anomaly_data = df[df['is_anomaly']]
 
-# 第三行：两个大图表
-col5, col6 = st.columns(2)
+fig_anomaly = go.Figure()
+fig_anomaly.add_trace(go.Histogram(
+    x=normal_data['total_cost'], 
+    name='正常数据', 
+    marker_color='#28a745', 
+    opacity=0.7,
+    nbinsx=20
+))
 
-with col5:
-    st.markdown("### 🚨 异常数据分析")
-    normal_data = df[~df['is_anomaly']]
-    anomaly_data = df[df['is_anomaly']]
-    
-    fig_anomaly = go.Figure()
+if len(anomaly_data) > 0:
     fig_anomaly.add_trace(go.Histogram(
-        x=normal_data['total_cost'], 
-        name='正常数据', 
-        marker_color='#28a745', 
+        x=anomaly_data['total_cost'], 
+        name='异常数据',
+        marker_color='#dc3545', 
         opacity=0.7,
         nbinsx=20
     ))
-    
-    if len(anomaly_data) > 0:
-        fig_anomaly.add_trace(go.Histogram(
-            x=anomaly_data['total_cost'], 
-            name='异常数据',
-            marker_color='#dc3545', 
-            opacity=0.7,
-            nbinsx=20
-        ))
-    
-    fig_anomaly.update_layout(
-        title="正常vs异常数据成本分布",
+
+fig_anomaly.update_layout(
+    title="正常vs异常数据成本分布",
+    paper_bgcolor='white',
+    plot_bgcolor='white',
+    font_color='black',
+    height=500,  # 增加高度
+    font_size=14,  # 增加字体大小
+    barmode='overlay'
+)
+st.plotly_chart(fig_anomaly, use_container_width=True)
+
+# 第六个图表：市场场景影响（单独一行）
+st.markdown("### 🌊 市场场景影响")
+scenario_impact = df.groupby('market_scenario')['total_cost'].mean().reset_index()
+fig_scenario = px.bar(
+    scenario_impact, 
+    x='market_scenario', 
+    y='total_cost',
+    title="不同市场场景平均成本",
+    color='total_cost',
+    color_continuous_scale='Oranges'
+)
+fig_scenario.update_layout(
+    paper_bgcolor='white',
+    plot_bgcolor='white',
+    font_color='black',
+    height=500,  # 增加高度
+    font_size=14  # 增加字体大小
+)
+st.plotly_chart(fig_scenario, use_container_width=True)
+
+# 第七个图表：成本构成分析（单独一行）
+st.markdown("### 💰 成本构成分析")
+# 计算平均成本构成
+cost_components = ['labor_cost', 'vehicle_cost', 'equipment_cost']
+avg_costs = []
+comp_names = []
+
+for comp in cost_components:
+    if comp in df.columns:
+        avg_cost = df[comp].mean()
+        if avg_cost > 0:  # 只包含有值的成本项
+            avg_costs.append(avg_cost)
+            comp_names.append({
+                'labor_cost': '人工成本',
+                'vehicle_cost': '车辆成本', 
+                'equipment_cost': '设备成本'
+            }[comp])
+
+if len(avg_costs) > 0:
+    fig_cost_pie = px.pie(
+        values=avg_costs, 
+        names=comp_names,
+        title="平均成本构成占比"
+    )
+    fig_cost_pie.update_layout(
         paper_bgcolor='white',
         plot_bgcolor='white',
         font_color='black',
-        height=400,
-        barmode='overlay'
+        height=500,  # 增加高度
+        font_size=14  # 增加字体大小
     )
-    st.plotly_chart(fig_anomaly, use_container_width=True)
+    st.plotly_chart(fig_cost_pie, use_container_width=True)
+else:
+    st.info("成本构成数据不完整，无法生成饼图")
 
-with col6:
-    st.markdown("### 🌊 市场场景影响")
-    scenario_impact = df.groupby('market_scenario')['total_cost'].mean().reset_index()
-    fig_scenario = px.bar(
-        scenario_impact, 
-        x='market_scenario', 
-        y='total_cost',
-        title="不同市场场景平均成本",
-        color='total_cost',
-        color_continuous_scale='Oranges'
-    )
-    fig_scenario.update_layout(
-        paper_bgcolor='white',
-        plot_bgcolor='white',
-        font_color='black',
-        height=400
-    )
-    st.plotly_chart(fig_scenario, use_container_width=True)
+# 第八个图表：预测准确度趋势（单独一行）
+st.markdown("### 🔮 预测准确度趋势")
+# 模拟预测准确度数据
+accuracy_data = np.random.normal(0.85, 0.05, 30)
+accuracy_data = np.clip(accuracy_data, 0.7, 0.95)  # 限制在合理范围
 
-# 第四行：成本构成和预测准确度
-col7, col8 = st.columns(2)
-
-with col7:
-    st.markdown("### 💰 成本构成分析")
-    # 计算平均成本构成
-    cost_components = ['labor_cost', 'vehicle_cost', 'equipment_cost']
-    avg_costs = []
-    comp_names = []
-    
-    for comp in cost_components:
-        if comp in df.columns:
-            avg_cost = df[comp].mean()
-            if avg_cost > 0:  # 只包含有值的成本项
-                avg_costs.append(avg_cost)
-                comp_names.append({
-                    'labor_cost': '人工成本',
-                    'vehicle_cost': '车辆成本', 
-                    'equipment_cost': '设备成本'
-                }[comp])
-    
-    if len(avg_costs) > 0:
-        fig_cost_pie = px.pie(
-            values=avg_costs, 
-            names=comp_names,
-            title="平均成本构成占比"
-        )
-        fig_cost_pie.update_layout(
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            font_color='black',
-            height=400
-        )
-        st.plotly_chart(fig_cost_pie, use_container_width=True)
-    else:
-        st.info("成本构成数据不完整，无法生成饼图")
-
-with col8:
-    st.markdown("### 🔮 预测准确度趋势")
-    # 模拟预测准确度数据
-    accuracy_data = np.random.normal(0.85, 0.05, 30)
-    accuracy_data = np.clip(accuracy_data, 0.7, 0.95)  # 限制在合理范围
-    
-    fig_accuracy = px.line(
-        x=list(range(1, 31)), 
-        y=accuracy_data,
-        title="30天预测准确度变化趋势",
-        markers=True
-    )
-    fig_accuracy.update_traces(
-        line_color='#6f42c1',
-        marker_color='#563d7c',
-        marker_size=6
-    )
-    fig_accuracy.update_layout(
-        paper_bgcolor='white',
-        plot_bgcolor='white',
-        font_color='black',
-        height=400,
-        xaxis_title="天数",
-        yaxis_title="预测准确率"
-    )
-    st.plotly_chart(fig_accuracy, use_container_width=True)
+fig_accuracy = px.line(
+    x=list(range(1, 31)), 
+    y=accuracy_data,
+    title="30天预测准确度变化趋势",
+    markers=True
+)
+fig_accuracy.update_traces(
+    line_color='#6f42c1',
+    marker_color='#563d7c',
+    marker_size=8  # 增加标记大小
+)
+fig_accuracy.update_layout(
+    paper_bgcolor='white',
+    plot_bgcolor='white',
+    font_color='black',
+    height=500,  # 增加高度
+    font_size=14,  # 增加字体大小
+    xaxis_title="天数",
+    yaxis_title="预测准确率"
+)
+st.plotly_chart(fig_accuracy, use_container_width=True)
 
 # 详细数据表格展示功能 - 分类显示正常业务数据和异常业务数据
 st.subheader("📋 详细数据表格展示功能")
