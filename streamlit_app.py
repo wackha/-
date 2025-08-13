@@ -356,6 +356,87 @@ def calculate_over_distance_cost(actual_distance, standard_distance, business_ty
 # ==================== 数据生成相关函数 ====================
 
 @st.cache_data(ttl=60)
+def generate_business_hours_timestamps(n_records):
+    """生成符合业务时间规律的时间戳，主要在7-18点，早上和下午业务量更多"""
+    timestamps = []
+    base_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # 定义每小时的业务权重（7-18点）
+    hour_weights = {
+        7: 0.15,   # 早上开始，业务量较多
+        8: 0.20,   # 上班高峰，业务量多
+        9: 0.18,   # 上午忙碌时段
+        10: 0.12,  # 上午正常时段
+        11: 0.10,  # 上午后期
+        12: 0.00,  # 午休时间，业务量少
+        13: 0.08,  # 下午开始
+        14: 0.25,  # 下午忙碌时段，业务量较多
+        15: 0.18,  # 下午高峰，业务量多
+        16: 0.16,  # 下午忙碌时段
+        17: 0.12,  # 下班前，业务量较多
+        18: 0.08   # 下班时间，业务量减少
+    }
+    
+    # 归一化权重
+    total_weight = sum(hour_weights.values())
+    normalized_weights = {hour: weight/total_weight for hour, weight in hour_weights.items()}
+    
+    # 根据权重分配生成时间戳
+    for i in range(n_records):
+        # 随机选择小时（7-18点）
+        hour = int(np.random.choice(
+            list(normalized_weights.keys()), 
+            p=list(normalized_weights.values())
+        ))
+        
+        # 在该小时内随机选择分钟
+        minute = int(np.random.randint(0, 60))
+        second = int(np.random.randint(0, 60))
+        
+        # 随机选择最近几天
+        days_ago = int(np.random.randint(0, 3))  # 最近3天
+        
+        timestamp = base_date - timedelta(days=days_ago) + timedelta(hours=hour, minutes=minute, seconds=second)
+        timestamps.append(timestamp)
+    
+    # 按时间排序
+    timestamps.sort()
+    return timestamps
+
+def generate_business_hour_for_date(target_date):
+    """为指定日期生成一个业务时间"""
+    # 定义每小时的业务权重（7-18点）
+    hour_weights = {
+        7: 0.15,   # 早上开始，业务量较多
+        8: 0.20,   # 上班高峰，业务量多
+        9: 0.18,   # 上午忙碌时段
+        10: 0.12,  # 上午正常时段
+        11: 0.10,  # 上午后期
+        12: 0.05,  # 午休时间，业务量少
+        13: 0.08,  # 下午开始
+        14: 0.15,  # 下午忙碌时段，业务量较多
+        15: 0.18,  # 下午高峰，业务量多
+        16: 0.16,  # 下午忙碌时段
+        17: 0.12,  # 下班前，业务量较多
+        18: 0.08   # 下班时间，业务量减少
+    }
+    
+    # 归一化权重
+    total_weight = sum(hour_weights.values())
+    normalized_weights = {hour: weight/total_weight for hour, weight in hour_weights.items()}
+    
+    # 随机选择小时（7-18点）
+    hour = int(np.random.choice(
+        list(normalized_weights.keys()), 
+        p=list(normalized_weights.values())
+    ))
+    
+    # 在该小时内随机选择分钟
+    minute = int(np.random.randint(0, 60))
+    second = int(np.random.randint(0, 60))
+    
+    return target_date.replace(hour=hour, minute=minute, second=second)
+
 def generate_sample_data():
     """生成基于周浦真实距离的示例数据"""
     np.random.seed(int(time.time()) // 60)
@@ -421,7 +502,7 @@ def generate_sample_data():
         'distance_km': actual_distance_list,
         'time_duration': time_duration_list,
         'efficiency_ratio': np.random.beta(3, 2, n_records),
-        'start_time': pd.date_range(start=datetime.now() - timedelta(hours=24), periods=n_records, freq='5min'),
+        'start_time': generate_business_hours_timestamps(n_records),
         'is_anomaly': np.random.choice([True, False], n_records, p=[0.1, 0.9]),
         'market_scenario': np.random.choice(['正常', '高需求期', '紧急状况', '节假日'], n_records, p=[0.6, 0.2, 0.1, 0.1]),
         'time_weight': np.random.choice([1.0, 1.1, 1.3, 1.6], n_records, p=[0.4, 0.3, 0.2, 0.1])
@@ -1241,7 +1322,6 @@ historical_df = generate_extended_historical_data(60)
 cost_optimization = analyze_cost_optimization(df)
 
 # ==================== 第一层：动态可视化成本管理看板系统 ====================
-st.markdown('<div class="layer-container">', unsafe_allow_html=True)
 st.markdown('<h2 class="layer-title">📊 第一层：业务成本实时监控与可视化分析</h2>', unsafe_allow_html=True)
 
 st.metric(
@@ -1368,11 +1448,8 @@ fig_trends.update_layout(
 
 st.plotly_chart(fig_trends, use_container_width=True, key="layer1_trends_subplot")
 
-st.markdown('</div>', unsafe_allow_html=True)
-
 # ==================== 第二层：动态数据驱动的成本分摊优化 ====================
-st.markdown('<div class="layer-container">', unsafe_allow_html=True)
-st.markdown('<h2 class="layer-title">🔍 第二层：动态数据驱动的成本分摊优化</h2>', unsafe_allow_html=True)
+st.markdown('<h2 class="layer-title">🔍 动态数据驱动的成本分摊优化</h2>', unsafe_allow_html=True)
 
 # 多维度图表分析
 st.subheader("📈 多维度业务分析")
@@ -1525,12 +1602,8 @@ st.write(f"""
 - 设备成本权重调整: {np.random.uniform(0.7, 1.1):.2f}
 - 节假日成本权重: {cost_optimization['time_weights']['节假日']}
 """)
-
-st.markdown('</div>', unsafe_allow_html=True)
-
 # ==================== 第三层：市场冲击模拟与预警机制 ====================
-st.markdown('<div class="layer-container">', unsafe_allow_html=True)
-st.markdown('<h2 class="layer-title">🎯 第三层：市场冲击模拟与预警机制</h2>', unsafe_allow_html=True)
+st.markdown('<h2 class="layer-title">🎯市场冲击模拟与预警机制</h2>', unsafe_allow_html=True)
 
 # 多层次预警机制
 st.subheader("🚨 多层次预警机制")
@@ -1698,13 +1771,8 @@ if normal_cost > 0:
         else:
             st.write(f"- {scenario}: 基准成本水平")
 
-st.markdown('</div>', unsafe_allow_html=True)
-
-# ...existing code...
-
 # ==================== 第四层：构建综合图表分析体系 ====================
-st.markdown('<div class="layer-container">', unsafe_allow_html=True)
-st.markdown('<h2 class="layer-title">🏢 第四层：构建综合图表分析体系</h2>', unsafe_allow_html=True)
+st.markdown('<h2 class="layer-title">🏢 构建综合图表分析体系</h2>', unsafe_allow_html=True)
 
 st.subheader("📊 多维度成本数据可视化展示")
 
@@ -2215,10 +2283,7 @@ with col4:
     prediction_horizon = st.selectbox("预测天数", [7, 14, 21, 30], key="prediction_horizon")
     model_complexity = st.selectbox("模型复杂度", ["简单", "中等", "复杂"], index=1, key="model_complexity")
 
-st.markdown('</div>', unsafe_allow_html=True)
-
 # ==================== 详细业务报告（在第四层后） ====================
-st.markdown('<div class="layer-container">', unsafe_allow_html=True)
 st.markdown('<h2 class="layer-title">📊 详细业务报告与核心指标分析</h2>', unsafe_allow_html=True)
 
 # 业务效率深度分析
@@ -2438,11 +2503,8 @@ if len(high_cost_businesses) > 0:
     risk_analysis.columns = ['平均成本', '最高成本', '风险数量', '平均距离', '平均时长', '平均效率']
     st.dataframe(risk_analysis, use_container_width=True)
 
-st.markdown('</div>', unsafe_allow_html=True)
-
 # ==================== 第五层：异常数据综合表 ====================
-st.markdown('<div class="layer-container">', unsafe_allow_html=True)
-st.markdown('<h2 class="layer-title">📋 第五层：异常数据综合表</h2>', unsafe_allow_html=True)
+st.markdown('<h2 class="layer-title">📋异常数据综合表</h2>', unsafe_allow_html=True)
 
 # 数据格式化函数
 def format_dataframe_for_display(df):
