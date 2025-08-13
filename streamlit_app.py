@@ -368,9 +368,9 @@ def generate_business_hours_timestamps(n_records):
         9: 0.18,   # 上午忙碌时段
         10: 0.12,  # 上午正常时段
         11: 0.10,  # 上午后期
-        12: 0.00,  # 午休时间，业务量少
+        12: 0.05,  # 午休时间，业务量少
         13: 0.08,  # 下午开始
-        14: 0.25,  # 下午忙碌时段，业务量较多
+        14: 0.15,  # 下午忙碌时段，业务量较多
         15: 0.18,  # 下午高峰，业务量多
         16: 0.16,  # 下午忙碌时段
         17: 0.12,  # 下班前，业务量较多
@@ -1449,7 +1449,7 @@ fig_trends.update_layout(
 st.plotly_chart(fig_trends, use_container_width=True, key="layer1_trends_subplot")
 
 # ==================== 第二层：动态数据驱动的成本分摊优化 ====================
-st.markdown('<h2 class="layer-title">🔍 动态数据驱动的成本分摊优化</h2>', unsafe_allow_html=True)
+st.markdown('<h2 class="layer-title">🔍 第二层：动态数据驱动的成本分摊优化</h2>', unsafe_allow_html=True)
 
 # 多维度图表分析
 st.subheader("📈 多维度业务分析")
@@ -1603,7 +1603,7 @@ st.write(f"""
 - 节假日成本权重: {cost_optimization['time_weights']['节假日']}
 """)
 # ==================== 第三层：市场冲击模拟与预警机制 ====================
-st.markdown('<h2 class="layer-title">🎯市场冲击模拟与预警机制</h2>', unsafe_allow_html=True)
+st.markdown('<h2 class="layer-title">🎯 第三层：市场冲击模拟与预警机制</h2>', unsafe_allow_html=True)
 
 # 多层次预警机制
 st.subheader("🚨 多层次预警机制")
@@ -1772,7 +1772,7 @@ if normal_cost > 0:
             st.write(f"- {scenario}: 基准成本水平")
 
 # ==================== 第四层：构建综合图表分析体系 ====================
-st.markdown('<h2 class="layer-title">🏢 构建综合图表分析体系</h2>', unsafe_allow_html=True)
+st.markdown('<h2 class="layer-title">🏢 第四层：构建综合图表分析体系</h2>', unsafe_allow_html=True)
 
 st.subheader("📊 多维度成本数据可视化展示")
 
@@ -2079,24 +2079,6 @@ with col1:
     
     region_analysis.columns = ['平均成本', '总成本', '业务量', '平均距离', '平均时长', '平均效率']
     
-    # 成本热力图
-    region_costs = df.groupby('region')['total_cost'].mean().reset_index()
-    fig_heatmap = px.bar(
-        region_costs, 
-        x='region', 
-        y='total_cost',
-        title="各区平均成本分布",
-        color='total_cost',
-        color_continuous_scale='Viridis'
-    )
-    fig_heatmap.update_layout(
-        paper_bgcolor='white',
-        plot_bgcolor='white',
-        font_color='black',
-        xaxis_tickangle=45
-    )
-    st.plotly_chart(fig_heatmap, use_container_width=True, key="layer5_region_heatmap")
-    
     # 区域详细数据
     st.write("**区域详细分析**")
     st.dataframe(region_analysis.head(8), use_container_width=True)
@@ -2109,29 +2091,6 @@ with col2:
     if len(counting_data) > 0:
         large_counting = counting_data[counting_data['counting_type'] == '大笔清点']
         small_counting = counting_data[counting_data['counting_type'] == '小笔清点']
-        
-        # 清点类型分布
-        if len(large_counting) > 0 and len(small_counting) > 0:
-            comparison_data = pd.DataFrame({
-                '清点类型': ['大笔清点', '小笔清点'],
-                '业务数量': [len(large_counting), len(small_counting)],
-                '平均成本': [large_counting['total_cost'].mean(), small_counting['total_cost'].mean()],
-                '平均时长': [large_counting['time_duration'].mean(), small_counting['time_duration'].mean()]
-            })
-            
-            fig_counting = px.pie(
-                comparison_data,
-                values='业务数量',
-                names='清点类型',
-                title="大笔vs小笔清点业务分布",
-                color_discrete_sequence=['#28a745', '#ffc107']
-            )
-            fig_counting.update_layout(
-                paper_bgcolor='white',
-                plot_bgcolor='white',
-                font_color='black'
-            )
-            st.plotly_chart(fig_counting, use_container_width=True, key="layer5_counting_pie")
         
         # 关键指标
         col_c1, col_c2 = st.columns(2)
@@ -2504,20 +2463,7 @@ if len(high_cost_businesses) > 0:
     st.dataframe(risk_analysis, use_container_width=True)
 
 # ==================== 第五层：异常数据综合表 ====================
-st.markdown('<h2 class="layer-title">📋异常数据综合表</h2>', unsafe_allow_html=True)
-
-# 数据格式化函数
-def format_dataframe_for_display(df):
-    display_df = df.copy()
-    if 'start_time' in display_df.columns:
-        display_df['start_time'] = display_df['start_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
-    
-    numeric_columns = ['amount', 'total_cost', 'distance_km', 'time_duration', 'vehicle_cost', 'labor_cost', 'equipment_cost']
-    for col in numeric_columns:
-        if col in display_df.columns:
-            display_df[col] = display_df[col].round(0).astype(int)
-    
-    return display_df
+st.markdown('<h2 class="layer-title">📋 第五层：异常数据综合表</h2>', unsafe_allow_html=True)
 
 # 异常数据表格
 tab1, tab2, tab3, tab4 = st.tabs(["📊 正常业务数据", "⚠️ 异常业务数据", "🔍 异常特征分析", "📈 数据趋势分析"])
