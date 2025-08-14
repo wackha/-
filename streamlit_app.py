@@ -2146,119 +2146,212 @@ with col2:
     else:
         st.info("当前时段无现金清点业务")
 
-# 左下角：金库调拨专项（扩展版）
-with col3:
-    st.subheader("🚛 金库调拨专项分析")
-    vault_data = df[df['business_type'] == '金库调拨']
-    
-    if len(vault_data) > 0:
-        # 调拨成本构成
-        fig_vault_cost = px.bar(
-            x=['基础成本', '超时成本', '超公里成本'],
-            y=[
-                vault_data['basic_cost'].mean() if 'basic_cost' in vault_data.columns else 0,
-                vault_data['overtime_cost'].mean() if 'overtime_cost' in vault_data.columns else 0,
-                vault_data['over_km_cost'].mean() if 'over_km_cost' in vault_data.columns else 0
-            ],
-            title="金库调拨成本构成分析",
-            color_discrete_sequence=['#007bff', '#ffc107', '#dc3545']
-        )
-        fig_vault_cost.update_layout(
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            font_color='black'
-        )
-        st.plotly_chart(fig_vault_cost, use_container_width=True, key="layer5_vault_cost")
-        
-        # 关键指标
-        col_v1, col_v2 = st.columns(2)
-        with col_v1:
-            st.metric("调拨业务数量", len(vault_data))
-            st.metric("固定距离", "15.0km")
-        with col_v2:
-            st.metric("平均调拨成本", f"¥{vault_data['total_cost'].mean():.0f}")
-            st.metric("平均时长", f"{vault_data['time_duration'].mean():.0f}分钟")
-        
-        # 时间分布分析
-        st.write("**调拨时间分布**")
-        time_ranges = pd.cut(vault_data['time_duration'], bins=[0, 45, 60, 75, 120], labels=['<45分', '45-60分', '60-75分', '>75分'])
-        time_dist = time_ranges.value_counts()
-        
-        fig_time_dist = px.bar(
-            x=time_dist.index,
-            y=time_dist.values,
-            title="金库调拨时间分布",
-            color_discrete_sequence=['#17a2b8']
-        )
-        fig_time_dist.update_layout(
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            font_color='black'
-        )
-        st.plotly_chart(fig_time_dist, use_container_width=True, key="layer5_time_dist")
-    else:
-        st.info("当前时段无金库调拨业务")
+# 第四层业务分析的col3和col4合并为ARIMA预测效能
+st.subheader("ARIMA预测模型深度验证")
 
-# 右下角：ARIMA预测效能（扩展版）
-with col4:
-    st.subheader("🔮 ARIMA预测效能")
+# 生成更长期的历史数据用于验证
+extended_data = generate_extended_historical_data(120)  # 4个月数据
+
+# 按日聚合
+daily_extended = extended_data.groupby('date').agg({
+    'total_cost': 'sum',
+    'business_type': 'count',
+    'efficiency_ratio': 'mean',
+    'is_anomaly': 'mean'
+}).reset_index()
+daily_extended.columns = ['date', 'total_cost', 'business_count', 'avg_efficiency', 'anomaly_rate']
+
+# 多种预测模型对比验证
+st.write("### 📊 多模型预测准确率对比")
+
+models_to_test = ["ARIMA模型", "机器学习", "时间序列"]
+model_results = {}
+
+# 分割数据：前80%训练，后20%测试
+split_point = int(len(daily_extended) * 0.8)
+train_data = daily_extended[:split_point]
+test_data = daily_extended[split_point:]
+
+col_model1, col_model2, col_model3 = st.columns(3)
+
+for i, model_name in enumerate(models_to_test):
+    # 使用训练数据进行预测
+    predictions = advanced_prediction_models(
+        train_data,
+        days_ahead=len(test_data),
+        model_type=model_name
+    )
     
-    # 生成预测数据
-    daily_stats = historical_df.groupby('date').agg({
-        'total_cost': 'sum',
-        'business_type': 'count',
-        'efficiency_ratio': 'mean',
-        'is_anomaly': 'mean'
-    }).reset_index()
-    daily_stats.columns = ['date', 'total_cost', 'business_count', 'avg_efficiency', 'anomaly_rate']
+    # 计算预测准确率
+    actual_costs = test_data['total_cost'].values
+    predicted_costs = predictions['total_cost']['values'][:len(actual_costs)]
     
-    # 简化预测逻辑
-    future_dates = [daily_stats['date'].max() + timedelta(days=i) for i in range(1, 8)]
-    base_cost = daily_stats['total_cost'].tail(7).mean()
-    future_costs = [base_cost * (1 + np.random.uniform(-0.1, 0.1)) for _ in range(7)]
+    # 确保数组长度一致
+    min_length = min(len(actual_costs), len(predicted_costs))
+    actual_costs = actual_costs[:min_length]
+    predicted_costs = predicted_costs[:min_length]
     
-    # 预测图表
-    fig_prediction = go.Figure()
+    # 计算误差指标
+    mape = np.mean(np.abs((actual_costs - predicted_costs) / actual_costs)) * 100
+    rmse = np.sqrt(np.mean((actual_costs - predicted_costs) ** 2))
     
-    # 历史数据
-    fig_prediction.add_trace(go.Scatter(
-        x=daily_stats['date'].tail(14),
-        y=daily_stats['total_cost'].tail(14),
+    # R²计算
+    ss_res = np.sum((actual_costs - predicted_costs) ** 2)
+    ss_tot = np.sum((actual_costs - np.mean(actual_costs)) ** 2)
+    r2 = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
+    r2 = max(0, min(1, r2))
+    
+    accuracy = max(0, min(100, (1 - mape/100) * 100))
+    
+    model_results[model_name] = {
+        'accuracy': accuracy,
+        'mape': mape,
+        'rmse': rmse,
+        'r2': r2,
+        'predictions': predicted_costs,
+        'actual': actual_costs
+    }
+    
+    # 显示结果
+    if i == 0:
+        with col_model1:
+            st.metric(f"{model_name}", f"{accuracy:.1f}%", f"MAPE: {mape:.1f}%")
+            st.caption(f"R²: {r2:.3f} | RMSE: {rmse:.0f}")
+    elif i == 1:
+        with col_model2:
+            st.metric(f"{model_name}", f"{accuracy:.1f}%", f"MAPE: {mape:.1f}%")
+            st.caption(f"R²: {r2:.3f} | RMSE: {rmse:.0f}")
+    else:
+        with col_model3:
+            st.metric(f"{model_name}", f"{accuracy:.1f}%", f"MAPE: {mape:.1f}%")
+            st.caption(f"R²: {r2:.3f} | RMSE: {rmse:.0f}")
+
+# 找出最佳模型
+best_model = max(model_results.keys(), key=lambda m: model_results[m]['accuracy'])
+best_accuracy = model_results[best_model]['accuracy']
+
+if best_accuracy >= 90:
+    st.success(f"🏆 最佳模型: **{best_model}** (准确率: {best_accuracy:.1f}%) - 预测性能优秀")
+elif best_accuracy >= 80:
+    st.info(f"🥈 最佳模型: **{best_model}** (准确率: {best_accuracy:.1f}%) - 预测性能良好")
+else:
+    st.warning(f"⚠️ 最佳模型: **{best_model}** (准确率: {best_accuracy:.1f}%) - 需要模型优化")
+
+# 预测vs实际对比图
+st.write("### 📈 预测效果可视化对比")
+
+fig_comparison = go.Figure()
+
+# 实际数据
+test_dates = test_data['date'].values[:len(model_results[best_model]['actual'])]
+fig_comparison.add_trace(go.Scatter(
+    x=test_dates,
+    y=model_results[best_model]['actual'],
+    mode='lines+markers',
+    name='实际数据',
+    line=dict(color='#007bff', width=3),
+    marker=dict(size=8)
+))
+
+# 各模型预测对比
+colors = ['#ff6b6b', '#28a745', '#ffc107']
+for i, (model_name, results) in enumerate(model_results.items()):
+    fig_comparison.add_trace(go.Scatter(
+        x=test_dates,
+        y=results['predictions'][:len(test_dates)],
         mode='lines+markers',
-        name='历史数据',
-        line=dict(color='#007bff', width=2)
+        name=f'{model_name} (准确率: {results["accuracy"]:.1f}%)',
+        line=dict(color=colors[i], width=2, dash='dash'),
+        marker=dict(size=6)
     ))
+
+fig_comparison.update_layout(
+    title="多模型预测效果对比",
+    paper_bgcolor='white',
+    plot_bgcolor='white',
+    font_color='black',
+    xaxis_title="日期",
+    yaxis_title="总成本(元)",
+    legend=dict(x=0.02, y=0.98)
+)
+
+st.plotly_chart(fig_comparison, use_container_width=True, key="prediction_comparison")
+
+# 模型性能评估表
+st.write("### � 模型性能详细评估")
+
+performance_df = pd.DataFrame({
+    '模型': list(model_results.keys()),
+    '准确率(%)': [results['accuracy'] for results in model_results.values()],
+    'MAPE(%)': [results['mape'] for results in model_results.values()],
+    'RMSE': [results['rmse'] for results in model_results.values()],
+    'R²系数': [results['r2'] for results in model_results.values()]
+})
+
+# 分别格式化不同类型的数据
+performance_df['准确率(%)'] = performance_df['准确率(%)'].round(2)
+performance_df['MAPE(%)'] = performance_df['MAPE(%)'].round(2)
+performance_df['RMSE'] = performance_df['RMSE'].round(0)
+performance_df['R²系数'] = performance_df['R²系数'].round(2)
+
+# 添加性能等级
+performance_df['性能等级'] = performance_df['准确率(%)'].apply(
+    lambda x: '优秀' if x >= 90 else '良好' if x >= 80 else '一般' if x >= 70 else '需改进'
+)
+
+st.dataframe(performance_df, use_container_width=True)
+
+# 误差分布分析
+st.write("### 📊 预测误差分布分析")
+
+col_error1, col_error2 = st.columns(2)
+
+with col_error1:
+    # 误差分布直方图
+    best_errors = model_results[best_model]['actual'] - model_results[best_model]['predictions']
     
-    # 预测数据
-    fig_prediction.add_trace(go.Scatter(
-        x=future_dates,
-        y=future_costs,
-        mode='lines+markers',
-        name='ARIMA预测',
-        line=dict(color='#ff6b6b', width=2, dash='dash')
-    ))
-    
-    fig_prediction.update_layout(
-        title="7天成本预测",
+    fig_error_dist = px.histogram(
+        x=best_errors,
+        title=f"{best_model} 预测误差分布",
+        nbins=20,
+        color_discrete_sequence=['#007bff']
+    )
+    fig_error_dist.add_vline(
+        x=0, 
+        line_dash="dash", 
+        line_color="red",
+        annotation_text="零误差线"
+    )
+    fig_error_dist.update_layout(
         paper_bgcolor='white',
         plot_bgcolor='white',
-        font_color='black'
+        font_color='black',
+        xaxis_title="预测误差",
+        yaxis_title="频次"
     )
-    st.plotly_chart(fig_prediction, use_container_width=True, key="layer5_arima_prediction")
-    
-    # 预测准确率和模型性能
-    col_p1, col_p2 = st.columns(2)
-    with col_p1:
-        st.metric("预测准确率", f"{np.random.uniform(85, 95):.1f}%")
-        st.metric("模型R²", f"{np.random.uniform(0.80, 0.94):.3f}")
-    with col_p2:
-        st.metric("MAPE误差", f"{np.random.uniform(5, 15):.1f}%")
-        st.metric("趋势准确率", f"{np.random.uniform(88, 96):.1f}%")
-    
-    # 预测配置
-    st.write("**预测配置**")
-    prediction_horizon = st.selectbox("预测天数", [7, 14, 21, 30], key="prediction_horizon")
-    model_complexity = st.selectbox("模型复杂度", ["简单", "中等", "复杂"], index=1, key="model_complexity")
+    st.plotly_chart(fig_error_dist, use_container_width=True, key="prediction_error_dist")
+
+with col_error2:
+    # 误差随时间变化
+    fig_error_time = px.scatter(
+        x=range(len(best_errors)),
+        y=best_errors,
+        title=f"{best_model} 误差时间序列",
+        color_discrete_sequence=['#ff6b6b']
+    )
+    fig_error_time.add_hline(
+        y=0, 
+        line_dash="dash", 
+        line_color="red"
+    )
+    fig_error_time.update_layout(
+        paper_bgcolor='white',
+        plot_bgcolor='white',
+        font_color='black',
+        xaxis_title="时间序列",
+        yaxis_title="预测误差"
+    )
+    st.plotly_chart(fig_error_time, use_container_width=True, key="prediction_error_time")
 
 # ==================== 详细业务报告（在第四层后） ====================
 st.markdown('<h2 class="layer-title">📊详细业务报告与核心指标分析</h2>', unsafe_allow_html=True)
