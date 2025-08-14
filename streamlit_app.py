@@ -1340,14 +1340,14 @@ st.metric(
 avg_efficiency = df['efficiency_ratio'].mean()
 st.metric(
     label="⚡ 运营效率",
-    value=f"{avg_efficiency:.0f}",
+    value=f"{avg_efficiency:.2f}",
     delta=f"{np.random.uniform(-2, 8):+.0f}%"
 )
 
 anomaly_rate = df['is_anomaly'].mean() * 100
 st.metric(
     label="🚨 异常监控",
-    value=f"{anomaly_rate:.0f}%",
+    value=f"{anomaly_rate:.2f}%",
     delta=f"{np.random.uniform(-1, 3):+.0f}%"
 )
 
@@ -1384,8 +1384,8 @@ business_summary = df.groupby('business_type').agg({
 }).round(0)
 
 business_summary.columns = ['总成本', '平均成本', '平均效率', '异常率', '平均距离', '平均时长']
-business_summary['异常率'] = (business_summary['异常率'] * 100).round(0).astype(str) + '%'
-business_summary['平均效率'] = (business_summary['平均效率'] * 100).round(0).astype(str) + '%'
+business_summary['异常率'] = (business_summary['异常率'] * 100).round(2).astype(str) + '%'
+business_summary['平均效率'] = (business_summary['平均效率'] * 100).round(2).astype(str) + '%'
 
 st.dataframe(business_summary, use_container_width=True)
 
@@ -1631,7 +1631,7 @@ st.markdown(f"""
     text-align: center;
     margin: 10px 0;
     <h3>当前风险等级: {risk_level}</h3>
-    <p>高成本业务: {len(high_cost_businesses)} 笔 ({len(high_cost_businesses)/len(df)*100:.0f}%)</p>
+    <p>高成本业务: {len(high_cost_businesses)} 笔 ({len(high_cost_businesses)/len(df)*100:.2f}%)</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1671,7 +1671,7 @@ st.markdown(f"""
     margin: 10px 0;
 '>
     <h3>🎯 优化潜力分析</h3>
-    <h1 style='font-size: 2.5rem; margin: 10px 0;'>{optimization_potential:.0f}%</h1>
+    <h1 style='font-size: 2.5rem; margin: 10px 0;'>{optimization_potential:.2f}%</h1>
     <p>预计节约 ¥{total_cost * cost_optimization['cost_reduction_estimate']:,.0f}</p>
 </div>
 """, unsafe_allow_html=True)
@@ -1695,7 +1695,7 @@ if st.button("▶️ 启动10万次迭代优化", key="monte_carlo_layer3"):
             x=total_savings, 
             line_dash="dash", 
             line_color="red",
-            annotation_text=f"平均: {total_savings:.0f}%"
+            annotation_text=f"平均: {total_savings:.2f}%"
         )
         fig_opt_dist.update_layout(
             paper_bgcolor='white',
@@ -1704,7 +1704,7 @@ if st.button("▶️ 启动10万次迭代优化", key="monte_carlo_layer3"):
         )
         st.plotly_chart(fig_opt_dist, use_container_width=True, key="layer3_monte_carlo_histogram")
         
-        st.success(f"✅ 模拟完成：成本节约潜力 {total_savings:.0f}%")
+        st.success(f"✅ 模拟完成：成本节约潜力 {total_savings:.2f}%")
 
 # 优化策略选择
 st.subheader("🎯 优化策略选择")
@@ -1736,6 +1736,10 @@ scenario_impact = df.groupby('market_scenario').agg({
 scenario_impact.columns = ['平均成本', '业务量', '平均效率', '异常率']
 scenario_impact.index = ['高需求期', '节假日', '紧急状况', '正常']
 
+# 单独处理效率列，保留2位小数
+scenario_impact['平均效率'] = (scenario_impact['平均效率'] * 100).round(2)
+scenario_impact['异常率'] = (scenario_impact['异常率'] * 100).round(2)
+
 st.write("**各市场场景成本结构影响**")
 st.dataframe(scenario_impact, use_container_width=True)
 
@@ -1765,9 +1769,9 @@ if normal_cost > 0:
     for scenario, cost in current_scenario_cost.items():
         impact_pct = ((cost - normal_cost) / normal_cost * 100) if scenario != '正常' else 0
         if impact_pct > 0:
-            st.write(f"- {scenario}: +{impact_pct:.0f}% 成本上升")
+            st.write(f"- {scenario}: +{impact_pct:.2f}% 成本上升")
         elif impact_pct < 0:
-            st.write(f"- {scenario}: {impact_pct:.0f}% 成本下降")
+            st.write(f"- {scenario}: {impact_pct:.2f}% 成本下降")
         else:
             st.write(f"- {scenario}: 基准成本水平")
 
@@ -1979,6 +1983,10 @@ fig_accuracy.update_layout(
 )
 st.plotly_chart(fig_accuracy, use_container_width=True, key="prediction_accuracy_chart")
 
+# 定义异常数据
+anomaly_business = df[df['is_anomaly'] == 1]
+normal_business = df[df['is_anomaly'] == 0]
+
 # 系统自动计算异常数据的特征指标
 if len(anomaly_business) > 0:
     st.subheader("🔍 异常数据特征指标分析")
@@ -2013,8 +2021,13 @@ if len(anomaly_business) > 0:
         ]
     })
     
+    # 格式化显示 - 效率保留2位小数，其他保留整数
+    comparison_metrics.iloc[0, 1:] = comparison_metrics.iloc[0, 1:].round(0)  # 成本保留整数
+    comparison_metrics.iloc[1, 1:] = comparison_metrics.iloc[1, 1:].round(2)  # 效率保留2位小数
+    comparison_metrics.iloc[2:, 1:] = comparison_metrics.iloc[2:, 1:].round(0)  # 距离时长保留整数
+    
     comparison_metrics['差异比例'] = ((comparison_metrics['异常数据'] - comparison_metrics['正常数据']) 
-                                   / comparison_metrics['正常数据'] * 100).round(0).astype(str) + '%'
+                                   / comparison_metrics['正常数据'] * 100).round(2).astype(str) + '%'
     
     st.dataframe(comparison_metrics, use_container_width=True)
     
@@ -2022,7 +2035,7 @@ if len(anomaly_business) > 0:
     st.write("**优化管理决策依据**")
     st.write(f"""
     **基于异常数据分析的管理建议：**
-    - 异常业务成本比正常业务高 {((avg_anomaly_cost - normal_business['total_cost'].mean()) / normal_business['total_cost'].mean() * 100):.0f}%
+    - 异常业务成本比正常业务高 {((avg_anomaly_cost - normal_business['total_cost'].mean()) / normal_business['total_cost'].mean() * 100):.2f}%
     - 建议重点监控 {anomaly_business['business_type'].mode().iloc[0] if len(anomaly_business) > 0 else '所有'} 类型业务
     - 异常高发区域：{anomaly_business['region'].mode().iloc[0] if len(anomaly_business) > 0 else '暂无'}
     - 建议优化时段：{anomaly_business.groupby('hour')['total_cost'].mean().idxmax() if 'hour' in anomaly_business.columns else '全天'}点
@@ -2063,10 +2076,10 @@ with col2:
         col_c1, col_c2 = st.columns(2)
         with col_c1:
             st.metric("清点业务总数", len(counting_data))
-            st.metric("大笔清点占比", f"{len(large_counting)/len(counting_data)*100:.1f}%")
+            st.metric("大笔清点占比", f"{len(large_counting)/len(counting_data)*100:.2f}%")
         with col_c2:
             st.metric("平均清点成本", f"¥{counting_data['total_cost'].mean():,.0f}")
-            st.metric("清点效率", f"{counting_data['efficiency_ratio'].mean():.3f}")
+            st.metric("清点效率", f"{counting_data['efficiency_ratio'].mean():.2f}")
         
         # 成本构成分析
         st.write("**成本构成分析**")
@@ -2229,7 +2242,7 @@ with col_d3:
     st.metric("成本效率比", f"{cost_efficiency.mean():.0f}")
     st.caption("成本/效率平均值")
 with col_d4:
-    st.metric("效率改进潜力", f"{(1-avg_efficiency)*100:.1f}%")
+    st.metric("效率改进潜力", f"{(1-avg_efficiency)*100:.2f}%")
     st.caption("基于当前效率计算")
 
 # 效率分布分析
@@ -3190,7 +3203,7 @@ if validation_mode == "生成验证报告":
             - **覆盖区域**: {len(df['region'].unique())} 个上海行政区
             - **异常检测**: {df['is_anomaly'].sum()} 条异常记录 ({df['is_anomaly'].mean()*100:.1f}%)
             - **总成本**: ¥{df['total_cost'].sum():,.0f}
-            - **平均效率**: {df['efficiency_ratio'].mean():.3f}
+            - **平均效率**: {df['efficiency_ratio'].mean():.2f}
             """)
         
         if "数据质量分析" in report_sections:
