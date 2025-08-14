@@ -1381,9 +1381,15 @@ business_summary = df.groupby('business_type').agg({
     'is_anomaly': 'mean',
     'distance_km': 'mean',
     'time_duration': 'mean'
-}).round(0)
+})
 
 business_summary.columns = ['总成本', '平均成本', '平均效率', '异常率', '平均距离', '平均时长']
+
+# 分别格式化不同类型的数据
+business_summary['总成本'] = business_summary['总成本'].round(0)
+business_summary['平均成本'] = business_summary['平均成本'].round(0)
+business_summary['平均距离'] = business_summary['平均距离'].round(0)
+business_summary['平均时长'] = business_summary['平均时长'].round(0)
 business_summary['异常率'] = (business_summary['异常率'] * 100).round(2).astype(str) + '%'
 business_summary['平均效率'] = (business_summary['平均效率'] * 100).round(2).astype(str) + '%'
 
@@ -1586,10 +1592,15 @@ st.plotly_chart(fig_historical, use_container_width=True, key="layer2_historical
 time_factor_analysis = df.groupby('time_weight').agg({
     'total_cost': ['mean', 'count'],
     'efficiency_ratio': 'mean'
-}).round(0)
+})
 
 time_factor_analysis.columns = ['平均成本', '业务量', '平均效率']
 time_factor_analysis.index = ['正常时段(1.0)', '忙碌时段(1.1)', '高峰时段(1.3)', '特殊时段(1.6)']
+
+# 分别格式化不同类型的数据
+time_factor_analysis['平均成本'] = time_factor_analysis['平均成本'].round(0)
+time_factor_analysis['业务量'] = time_factor_analysis['业务量'].round(0)
+time_factor_analysis['平均效率'] = (time_factor_analysis['平均效率'] * 100).round(2)
 
 st.write("**时间因素动态调整分析**")
 st.dataframe(time_factor_analysis, use_container_width=True)
@@ -1731,12 +1742,14 @@ scenario_impact = df.groupby('market_scenario').agg({
     'total_cost': ['mean', 'count'],
     'efficiency_ratio': 'mean',
     'is_anomaly': 'mean'
-}).round(0)
+})
 
 scenario_impact.columns = ['平均成本', '业务量', '平均效率', '异常率']
 scenario_impact.index = ['高需求期', '节假日', '紧急状况', '正常']
 
-# 单独处理效率列，保留2位小数
+# 分别格式化不同类型的数据
+scenario_impact['平均成本'] = scenario_impact['平均成本'].round(0)
+scenario_impact['业务量'] = scenario_impact['业务量'].round(0)
 scenario_impact['平均效率'] = (scenario_impact['平均效率'] * 100).round(2)
 scenario_impact['异常率'] = (scenario_impact['异常率'] * 100).round(2)
 
@@ -2005,29 +2018,46 @@ if len(anomaly_business) > 0:
     
     # 异常数据对比分析
     st.write("**异常vs正常数据对比分析**")
+    
+    # 计算各项指标
+    normal_cost = normal_business['total_cost'].mean()
+    normal_efficiency = normal_business['efficiency_ratio'].mean()
+    normal_distance = normal_business['distance_km'].mean()
+    normal_time = normal_business['time_duration'].mean()
+    
+    anomaly_cost = anomaly_business['total_cost'].mean()
+    anomaly_efficiency = anomaly_business['efficiency_ratio'].mean()
+    anomaly_distance = anomaly_business['distance_km'].mean()
+    anomaly_time = anomaly_business['time_duration'].mean()
+    
     comparison_metrics = pd.DataFrame({
         '指标类型': ['平均成本', '平均效率', '平均距离', '平均时长'],
         '正常数据': [
-            normal_business['total_cost'].mean(),
-            normal_business['efficiency_ratio'].mean(),
-            normal_business['distance_km'].mean(),
-            normal_business['time_duration'].mean()
+            f"{normal_cost:.0f}",
+            f"{normal_efficiency:.2f}",
+            f"{normal_distance:.0f}",
+            f"{normal_time:.0f}"
         ],
         '异常数据': [
-            anomaly_business['total_cost'].mean(),
-            anomaly_business['efficiency_ratio'].mean(),
-            anomaly_business['distance_km'].mean(),
-            anomaly_business['time_duration'].mean()
+            f"{anomaly_cost:.0f}",
+            f"{anomaly_efficiency:.2f}",
+            f"{anomaly_distance:.0f}",
+            f"{anomaly_time:.0f}"
         ]
     })
     
-    # 格式化显示 - 效率保留2位小数，其他保留整数
-    comparison_metrics.iloc[0, 1:] = comparison_metrics.iloc[0, 1:].round(0)  # 成本保留整数
-    comparison_metrics.iloc[1, 1:] = comparison_metrics.iloc[1, 1:].round(2)  # 效率保留2位小数
-    comparison_metrics.iloc[2:, 1:] = comparison_metrics.iloc[2:, 1:].round(0)  # 距离时长保留整数
+    # 计算差异比例
+    cost_diff = ((anomaly_cost - normal_cost) / normal_cost * 100)
+    efficiency_diff = ((anomaly_efficiency - normal_efficiency) / normal_efficiency * 100)
+    distance_diff = ((anomaly_distance - normal_distance) / normal_distance * 100)
+    time_diff = ((anomaly_time - normal_time) / normal_time * 100)
     
-    comparison_metrics['差异比例'] = ((comparison_metrics['异常数据'] - comparison_metrics['正常数据']) 
-                                   / comparison_metrics['正常数据'] * 100).round(2).astype(str) + '%'
+    comparison_metrics['差异比例'] = [
+        f"{cost_diff:.2f}%",
+        f"{efficiency_diff:.2f}%", 
+        f"{distance_diff:.2f}%",
+        f"{time_diff:.2f}%"
+    ]
     
     st.dataframe(comparison_metrics, use_container_width=True)
     
@@ -2055,9 +2085,17 @@ with col1:
         'distance_km': 'mean',
         'time_duration': 'mean',
         'efficiency_ratio': 'mean'
-    }).round(2)
+    })
     
     region_analysis.columns = ['平均成本', '总成本', '业务量', '平均距离', '平均时长', '平均效率']
+    
+    # 分别格式化不同类型的数据
+    region_analysis['平均成本'] = region_analysis['平均成本'].round(0)
+    region_analysis['总成本'] = region_analysis['总成本'].round(0)
+    region_analysis['业务量'] = region_analysis['业务量'].round(0)
+    region_analysis['平均距离'] = region_analysis['平均距离'].round(0)
+    region_analysis['平均时长'] = region_analysis['平均时长'].round(0)
+    region_analysis['平均效率'] = (region_analysis['平均效率'] * 100).round(2)
     
     # 区域详细数据
     st.write("**区域详细分析**")
@@ -2233,10 +2271,10 @@ low_efficiency = df[df['efficiency_ratio'] <= 0.5]
 
 col_d1, col_d2, col_d3, col_d4 = st.columns(4)
 with col_d1:
-    st.metric("高效率业务占比", f"{len(high_efficiency)/len(df)*100:.1f}%")
+    st.metric("高效率业务占比", f"{len(high_efficiency)/len(df)*100:.2f}%")
     st.caption("效率>0.7的业务")
 with col_d2:
-    st.metric("低效率业务占比", f"{len(low_efficiency)/len(df)*100:.1f}%")
+    st.metric("低效率业务占比", f"{len(low_efficiency)/len(df)*100:.2f}%")
     st.caption("效率≤0.5的业务")
 with col_d3:
     st.metric("成本效率比", f"{cost_efficiency.mean():.0f}")
@@ -2427,7 +2465,7 @@ if len(high_cost_businesses) > 0:
         st.metric("最高风险成本", f"¥{high_cost_businesses['total_cost'].max():.0f}")
     with col_risk4:
         risk_rate = len(high_cost_businesses) / len(df) * 100
-        st.metric("风险业务占比", f"{risk_rate:.1f}%")
+        st.metric("风险业务占比", f"{risk_rate:.2f}%")
     
     # 风险业务详细分析
     st.write("#### 🔍 风险业务特征分析")
@@ -2437,9 +2475,17 @@ if len(high_cost_businesses) > 0:
         'distance_km': 'mean',
         'time_duration': 'mean',
         'efficiency_ratio': 'mean'
-    }).round(2)
+    })
     
     risk_analysis.columns = ['平均成本', '最高成本', '风险数量', '平均距离', '平均时长', '平均效率']
+    
+    # 分别格式化不同类型的数据
+    risk_analysis['平均成本'] = risk_analysis['平均成本'].round(0)
+    risk_analysis['最高成本'] = risk_analysis['最高成本'].round(0)
+    risk_analysis['风险数量'] = risk_analysis['风险数量'].round(0)
+    risk_analysis['平均距离'] = risk_analysis['平均距离'].round(0)
+    risk_analysis['平均时长'] = risk_analysis['平均时长'].round(0)
+    risk_analysis['平均效率'] = (risk_analysis['平均效率'] * 100).round(2)
     st.dataframe(risk_analysis, use_container_width=True)
 
 # ==================== 第五层：异常数据综合表 ====================
@@ -2654,9 +2700,16 @@ with tab4:
         'total_cost': ['count', 'mean', 'sum'],
         'efficiency_ratio': 'mean',
         'is_anomaly': 'mean'
-    }).round(2)
+    })
     
     business_analysis.columns = ['业务数量', '平均成本', '总成本', '平均效率', '异常率']
+    
+    # 分别格式化不同类型的数据
+    business_analysis['业务数量'] = business_analysis['业务数量'].round(0)
+    business_analysis['平均成本'] = business_analysis['平均成本'].round(0)
+    business_analysis['总成本'] = business_analysis['总成本'].round(0)
+    business_analysis['平均效率'] = (business_analysis['平均效率'] * 100).round(2)
+    business_analysis['异常率'] = (business_analysis['异常率'] * 100).round(2)
     st.dataframe(business_analysis, use_container_width=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
@@ -2844,7 +2897,13 @@ if validation_mode == "ARIMA预测验证" or validation_mode == "全面验证":
                 'MAPE(%)': [results['mape'] for results in model_results.values()],
                 'RMSE': [results['rmse'] for results in model_results.values()],
                 'R²系数': [results['r2'] for results in model_results.values()]
-            }).round(2)
+            })
+            
+            # 分别格式化不同类型的数据
+            performance_df['准确率(%)'] = performance_df['准确率(%)'].round(2)
+            performance_df['MAPE(%)'] = performance_df['MAPE(%)'].round(2)
+            performance_df['RMSE'] = performance_df['RMSE'].round(0)
+            performance_df['R²系数'] = performance_df['R²系数'].round(2)
             
             # 添加性能等级
             performance_df['性能等级'] = performance_df['准确率(%)'].apply(
@@ -2971,7 +3030,7 @@ if validation_mode == "自定义验证模式":
                     st.write("**效率提升验证**")
                     custom_turnover = simulate_turnover_optimization()
                     improvement = custom_turnover['turnover_improvement']
-                    st.metric("周转效率提升", f"{improvement:.1f}%")
+                    st.metric("周转效率提升", f"{improvement:.2f}%")
             
             st.success(f"✅ 自定义验证完成：验证了 {len(filtered_df)} 条数据记录")
 
@@ -3201,7 +3260,7 @@ if validation_mode == "生成验证报告":
             - **数据规模**: {len(df):,} 条实时业务记录
             - **业务类型**: {', '.join(df['business_type'].unique())}
             - **覆盖区域**: {len(df['region'].unique())} 个上海行政区
-            - **异常检测**: {df['is_anomaly'].sum()} 条异常记录 ({df['is_anomaly'].mean()*100:.1f}%)
+            - **异常检测**: {df['is_anomaly'].sum()} 条异常记录 ({df['is_anomaly'].mean()*100:.2f}%)
             - **总成本**: ¥{df['total_cost'].sum():,.0f}
             - **平均效率**: {df['efficiency_ratio'].mean():.2f}
             """)
@@ -3290,8 +3349,8 @@ if validation_mode == "生成验证报告":
             st.write(f"""
             **风险指标监控**
             - 高成本业务占比: {high_cost_rate:.1f}%
-            - 异常业务发生率: {anomaly_rate:.1f}%
-            - 效率低下业务占比: {len(df[df['efficiency_ratio'] < 0.5]) / len(df) * 100:.1f}%
+            - 异常业务发生率: {anomaly_rate:.2f}%
+            - 效率低下业务占比: {len(df[df['efficiency_ratio'] < 0.5]) / len(df) * 100:.2f}%
             
             **风险等级评估**
             """)
