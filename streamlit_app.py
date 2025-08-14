@@ -1322,7 +1322,7 @@ historical_df = generate_extended_historical_data(60)
 cost_optimization = analyze_cost_optimization(df)
 
 # ==================== 第一层：动态可视化成本管理看板系统 ====================
-st.markdown('<h2 class="layer-title">📊 第一层：业务成本实时监控与可视化分析</h2>', unsafe_allow_html=True)
+st.markdown('<h2 class="layer-title">📊业务成本实时监控与可视化分析</h2>', unsafe_allow_html=True)
 
 st.metric(
     label="📊 业务总量",
@@ -1340,15 +1340,15 @@ st.metric(
 avg_efficiency = df['efficiency_ratio'].mean()
 st.metric(
     label="⚡ 运营效率",
-    value=f"{avg_efficiency:.3f}",
-    delta=f"{np.random.uniform(-2, 8):+.1f}%"
+    value=f"{avg_efficiency:.0f}",
+    delta=f"{np.random.uniform(-2, 8):+.0f}%"
 )
 
 anomaly_rate = df['is_anomaly'].mean() * 100
 st.metric(
     label="🚨 异常监控",
-    value=f"{anomaly_rate:.1f}%",
-    delta=f"{np.random.uniform(-1, 3):+.1f}%"
+    value=f"{anomaly_rate:.0f}%",
+    delta=f"{np.random.uniform(-1, 3):+.0f}%"
 )
 
 # 多维度图表分析与实时可视化组件
@@ -1381,11 +1381,11 @@ business_summary = df.groupby('business_type').agg({
     'is_anomaly': 'mean',
     'distance_km': 'mean',
     'time_duration': 'mean'
-}).round(2)
+}).round(0)
 
 business_summary.columns = ['总成本', '平均成本', '平均效率', '异常率', '平均距离', '平均时长']
-business_summary['异常率'] = (business_summary['异常率'] * 100).round(1).astype(str) + '%'
-business_summary['平均效率'] = (business_summary['平均效率'] * 100).round(1).astype(str) + '%'
+business_summary['异常率'] = (business_summary['异常率'] * 100).round(0).astype(str) + '%'
+business_summary['平均效率'] = (business_summary['平均效率'] * 100).round(0).astype(str) + '%'
 
 st.dataframe(business_summary, use_container_width=True)
 
@@ -1449,7 +1449,7 @@ fig_trends.update_layout(
 st.plotly_chart(fig_trends, use_container_width=True, key="layer1_trends_subplot")
 
 # ==================== 第二层：动态数据驱动的成本分摊优化 ====================
-st.markdown('<h2 class="layer-title">🔍 第二层：动态数据驱动的成本分摊优化</h2>', unsafe_allow_html=True)
+st.markdown('<h2 class="layer-title">🔍动态数据驱动的成本分摊优化</h2>', unsafe_allow_html=True)
 
 # 多维度图表分析
 st.subheader("📈 多维度业务分析")
@@ -1586,7 +1586,7 @@ st.plotly_chart(fig_historical, use_container_width=True, key="layer2_historical
 time_factor_analysis = df.groupby('time_weight').agg({
     'total_cost': ['mean', 'count'],
     'efficiency_ratio': 'mean'
-}).round(2)
+}).round(0)
 
 time_factor_analysis.columns = ['平均成本', '业务量', '平均效率']
 time_factor_analysis.index = ['正常时段(1.0)', '忙碌时段(1.1)', '高峰时段(1.3)', '特殊时段(1.6)']
@@ -1597,13 +1597,13 @@ st.dataframe(time_factor_analysis, use_container_width=True)
 # 成本权重动态优化建议
 st.write("**动态成本分摊策略优化**")
 st.write(f"""
-- 人工成本权重调整: {np.random.uniform(0.8, 1.2):.2f}
-- 运输距离成本权重: {np.random.uniform(0.9, 1.3):.2f}  
-- 设备成本权重调整: {np.random.uniform(0.7, 1.1):.2f}
+- 人工成本权重调整: {np.random.uniform(0.8, 1.2):.0f}
+- 运输距离成本权重: {np.random.uniform(0.9, 1.3):.0f}  
+- 设备成本权重调整: {np.random.uniform(0.7, 1.1):.0f}
 - 节假日成本权重: {cost_optimization['time_weights']['节假日']}
 """)
 # ==================== 第三层：市场冲击模拟与预警机制 ====================
-st.markdown('<h2 class="layer-title">🎯 第三层：市场冲击模拟与预警机制</h2>', unsafe_allow_html=True)
+st.markdown('<h2 class="layer-title">🎯市场冲击模拟与预警机制</h2>', unsafe_allow_html=True)
 
 # 多层次预警机制
 st.subheader("🚨 多层次预警机制")
@@ -1631,7 +1631,7 @@ st.markdown(f"""
     text-align: center;
     margin: 10px 0;
     <h3>当前风险等级: {risk_level}</h3>
-    <p>高成本业务: {len(high_cost_businesses)} 笔 ({len(high_cost_businesses)/len(df)*100:.1f}%)</p>
+    <p>高成本业务: {len(high_cost_businesses)} 笔 ({len(high_cost_businesses)/len(df)*100:.0f}%)</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1671,7 +1671,7 @@ st.markdown(f"""
     margin: 10px 0;
 '>
     <h3>🎯 优化潜力分析</h3>
-    <h1 style='font-size: 2.5rem; margin: 10px 0;'>{optimization_potential:.1f}%</h1>
+    <h1 style='font-size: 2.5rem; margin: 10px 0;'>{optimization_potential:.0f}%</h1>
     <p>预计节约 ¥{total_cost * cost_optimization['cost_reduction_estimate']:,.0f}</p>
 </div>
 """, unsafe_allow_html=True)
@@ -1695,7 +1695,7 @@ if st.button("▶️ 启动10万次迭代优化", key="monte_carlo_layer3"):
             x=total_savings, 
             line_dash="dash", 
             line_color="red",
-            annotation_text=f"平均: {total_savings:.1f}%"
+            annotation_text=f"平均: {total_savings:.0f}%"
         )
         fig_opt_dist.update_layout(
             paper_bgcolor='white',
@@ -1704,7 +1704,7 @@ if st.button("▶️ 启动10万次迭代优化", key="monte_carlo_layer3"):
         )
         st.plotly_chart(fig_opt_dist, use_container_width=True, key="layer3_monte_carlo_histogram")
         
-        st.success(f"✅ 模拟完成：成本节约潜力 {total_savings:.1f}%")
+        st.success(f"✅ 模拟完成：成本节约潜力 {total_savings:.0f}%")
 
 # 优化策略选择
 st.subheader("🎯 优化策略选择")
@@ -1731,7 +1731,7 @@ scenario_impact = df.groupby('market_scenario').agg({
     'total_cost': ['mean', 'count'],
     'efficiency_ratio': 'mean',
     'is_anomaly': 'mean'
-}).round(3)
+}).round(0)
 
 scenario_impact.columns = ['平均成本', '业务量', '平均效率', '异常率']
 scenario_impact.index = ['高需求期', '节假日', '紧急状况', '正常']
@@ -1765,14 +1765,14 @@ if normal_cost > 0:
     for scenario, cost in current_scenario_cost.items():
         impact_pct = ((cost - normal_cost) / normal_cost * 100) if scenario != '正常' else 0
         if impact_pct > 0:
-            st.write(f"- {scenario}: +{impact_pct:.1f}% 成本上升")
+            st.write(f"- {scenario}: +{impact_pct:.0f}% 成本上升")
         elif impact_pct < 0:
-            st.write(f"- {scenario}: {impact_pct:.1f}% 成本下降")
+            st.write(f"- {scenario}: {impact_pct:.0f}% 成本下降")
         else:
             st.write(f"- {scenario}: 基准成本水平")
 
 # ==================== 第四层：构建综合图表分析体系 ====================
-st.markdown('<h2 class="layer-title">🏢 第四层：构建综合图表分析体系</h2>', unsafe_allow_html=True)
+st.markdown('<h2 class="layer-title">🏢构建综合图表分析体系</h2>', unsafe_allow_html=True)
 
 st.subheader("📊 多维度成本数据可视化展示")
 
@@ -2026,7 +2026,7 @@ if len(anomaly_business) > 0:
     st.metric("异常数据平均时长", f"{avg_anomaly_time:.0f}分钟")
     
     avg_anomaly_distance = anomaly_business['distance_km'].mean()
-    st.metric("异常数据平均距离", f"{avg_anomaly_distance:.1f}km")
+    st.metric("异常数据平均距离", f"{avg_anomaly_distance:.0f}km")
     
     # 异常数据对比分析
     st.write("**异常vs正常数据对比分析**")
@@ -2047,7 +2047,7 @@ if len(anomaly_business) > 0:
     })
     
     comparison_metrics['差异比例'] = ((comparison_metrics['异常数据'] - comparison_metrics['正常数据']) 
-                                   / comparison_metrics['正常数据'] * 100).round(1).astype(str) + '%'
+                                   / comparison_metrics['正常数据'] * 100).round(0).astype(str) + '%'
     
     st.dataframe(comparison_metrics, use_container_width=True)
     
@@ -2055,7 +2055,7 @@ if len(anomaly_business) > 0:
     st.write("**优化管理决策依据**")
     st.write(f"""
     **基于异常数据分析的管理建议：**
-    - 异常业务成本比正常业务高 {((avg_anomaly_cost - normal_business['total_cost'].mean()) / normal_business['total_cost'].mean() * 100):.1f}%
+    - 异常业务成本比正常业务高 {((avg_anomaly_cost - normal_business['total_cost'].mean()) / normal_business['total_cost'].mean() * 100):.0f}%
     - 建议重点监控 {anomaly_business['business_type'].mode().iloc[0] if len(anomaly_business) > 0 else '所有'} 类型业务
     - 异常高发区域：{anomaly_business['region'].mode().iloc[0] if len(anomaly_business) > 0 else '暂无'}
     - 建议优化时段：{anomaly_business.groupby('hour')['total_cost'].mean().idxmax() if 'hour' in anomaly_business.columns else '全天'}点
@@ -2243,7 +2243,7 @@ with col4:
     model_complexity = st.selectbox("模型复杂度", ["简单", "中等", "复杂"], index=1, key="model_complexity")
 
 # ==================== 详细业务报告（在第四层后） ====================
-st.markdown('<h2 class="layer-title">📊 详细业务报告与核心指标分析</h2>', unsafe_allow_html=True)
+st.markdown('<h2 class="layer-title">📊详细业务报告与核心指标分析</h2>', unsafe_allow_html=True)
 
 # 业务效率深度分析
 st.subheader("⚡ 业务效率深度分析")
@@ -2463,7 +2463,7 @@ if len(high_cost_businesses) > 0:
     st.dataframe(risk_analysis, use_container_width=True)
 
 # ==================== 第五层：异常数据综合表 ====================
-st.markdown('<h2 class="layer-title">📋 第五层：异常数据综合表</h2>', unsafe_allow_html=True)
+st.markdown('<h2 class="layer-title">📋异常数据综合表</h2>', unsafe_allow_html=True)
 
 # 异常数据表格
 tab1, tab2, tab3, tab4 = st.tabs(["📊 正常业务数据", "⚠️ 异常业务数据", "🔍 异常特征分析", "📈 数据趋势分析"])
