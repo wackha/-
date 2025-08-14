@@ -1979,39 +1979,6 @@ fig_accuracy.update_layout(
 )
 st.plotly_chart(fig_accuracy, use_container_width=True, key="prediction_accuracy_chart")
 
-# 详细数据表格展示功能 - 分类显示正常业务数据和异常业务数据
-st.subheader("📋 详细数据表格展示功能")
-
-st.write("**正常业务数据展示**")
-normal_business = df[~df['is_anomaly']].copy()
-
-# 显示正常业务的关键列
-normal_display = normal_business[['txn_id', 'business_type', 'region', 'total_cost', 
-                                'efficiency_ratio', 'distance_km', 'time_duration']].head(10)
-normal_display.columns = ['交易ID', '业务类型', '区域', '总成本', '效率比', '距离(km)', '时长(分钟)']
-st.dataframe(normal_display, use_container_width=True)
-
-st.info(f"✅ 正常业务数据: {len(normal_business):,} 条")
-
-st.write("**异常业务数据展示与标识**")
-anomaly_business = df[df['is_anomaly']].copy()
-
-if len(anomaly_business) > 0:
-    # 异常数据标识处理
-    anomaly_display = anomaly_business[['txn_id', 'business_type', 'region', 'total_cost', 
-                                      'efficiency_ratio', 'distance_km', 'time_duration']].head(10)
-    anomaly_display.columns = ['交易ID', '业务类型', '区域', '总成本', '效率比', '距离(km)', '时长(分钟)']
-    
-    # 对异常数据进行标识
-    styled_anomaly = anomaly_display.style.applymap(
-        lambda x: 'background-color: #ffebee' if isinstance(x, (int, float)) else ''
-    )
-    st.dataframe(styled_anomaly, use_container_width=True)
-    
-    st.warning(f"⚠️ 异常业务数据: {len(anomaly_business):,} 条 (需重点关注)")
-else:
-    st.success("✅ 当前无异常业务数据")
-
 # 系统自动计算异常数据的特征指标
 if len(anomaly_business) > 0:
     st.subheader("🔍 异常数据特征指标分析")
@@ -3367,3 +3334,4 @@ with col_status3:
 
 with col_status4:
     st.metric("模型准确率", f"{np.random.uniform(85, 95):.1f}%", "稳定运行")
+
