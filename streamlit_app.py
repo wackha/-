@@ -16,9 +16,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# [保持所有原有的数据生成和计算函数]
-# 包括：RealDataConnector, CSS样式, 所有距离计算函数等...
-
 # 自定义CSS样式 - 白底主题，大字体版本
 st.markdown("""
 <style>
@@ -1311,7 +1308,7 @@ def format_dataframe_for_display(df):
 # 主标题
 st.markdown("""
 <div style='text-align: center; padding: 20px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); border-radius: 15px; margin-bottom: 30px; border: 2px solid #007bff; box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);'>
-    <h1 style='color: #007bff; font-size: 2.5rem; margin: 0; text-shadow: none;'>🏦 上海现金中心动态成本管理看板系统</h1>
+    <h1 style='color: #007bff; font-size: 2.5rem; margin: 0; text-shadow: none;'>🏦 动态成本管理看板系统</h1>
     <p style='color: #6c757d; font-size: 1.2rem; margin: 10px 0 0 0; font-weight: 500;'>实时监控 | 智能优化 | 风险预警 | 数据驱动决策</p>
 </div>
 """, unsafe_allow_html=True)
@@ -2853,3 +2850,4 @@ with col_status3:
 
 with col_status4:
     st.metric("模型准确率", f"{np.random.uniform(85, 95):.1f}%", "稳定运行")
+
