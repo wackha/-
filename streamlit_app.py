@@ -2709,57 +2709,6 @@ with anomaly_tabs[4]:
         st.info("当前数据中无异常业务记录")
 
 # 结束异常诊断中心
-    
-    with anomaly_overview_cols[2]:
-        if anomaly_count > 0:
-            max_anomaly_cost = df[df['is_anomaly']]['total_cost'].max()
-        else:
-            max_anomaly_cost = 0
-        st.metric("最高异常成本", f"¥{max_anomaly_cost:,.0f}")
-    
-    with anomaly_overview_cols[3]:
-        # 计算异常成本损失
-        normal_avg = df[~df['is_anomaly']]['total_cost'].mean()
-        if anomaly_count > 0:
-            total_loss = (avg_anomaly_cost - normal_avg) * anomaly_count
-        else:
-            total_loss = 0
-        st.metric("总异常损失", f"¥{total_loss:,.0f}")
-
-    # 异常分布饼图
-    col_pie1, col_pie2 = st.columns(2)
-    
-    with col_pie1:
-        status_counts = df['is_anomaly'].value_counts()
-        status_labels = ['正常业务', '异常业务']
-        
-        fig_status_pie = px.pie(
-            values=status_counts.values,
-            names=status_labels,
-            title="业务状态分布",
-            color_discrete_sequence=['#28a745', '#dc3545']
-        )
-        fig_status_pie.update_layout(
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            font_color='black'
-        )
-        st.plotly_chart(fig_status_pie, use_container_width=True, key="anomaly_status_pie")
-    
-    with col_pie2:
-        if anomaly_count > 0:
-            anomaly_by_business = df[df['is_anomaly']].groupby('business_type').size()
-            fig_business_anomaly = px.pie(
-                values=anomaly_by_business.values,
-                names=anomaly_by_business.index,
-                title="异常业务类型分布"
-            )
-            fig_business_anomaly.update_layout(
-                paper_bgcolor='white',
-                plot_bgcolor='white',
-                font_color='black'
-            )
-            st.plotly_chart(fig_business_anomaly, use_container_width=True, key="anomaly_business_pie")
 
 with anomaly_tabs[1]:
     st.subheader("✅ 正常业务分析")
