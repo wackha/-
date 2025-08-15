@@ -2710,53 +2710,6 @@ with anomaly_tabs[4]:
 
 # 结束异常诊断中心
 
-with anomaly_tabs[1]:
-    st.subheader("✅ 正常业务分析")
-    
-    normal_data = df[~df['is_anomaly']]
-    
-    if len(normal_data) > 0:
-        # 正常业务关键指标
-        normal_cols = st.columns(4)
-        
-        with normal_cols[0]:
-            st.metric("正常业务数量", f"{len(normal_data):,}")
-        
-        with normal_cols[1]:
-            st.metric("平均成本", f"¥{normal_data['total_cost'].mean():,.0f}")
-        
-        with normal_cols[2]:
-            st.metric("平均效率", f"{normal_data['efficiency_ratio'].mean():.2f}")
-        
-        with normal_cols[3]:
-            st.metric("平均距离", f"{normal_data['distance_km'].mean():.1f}km")
-        
-        # 正常业务成本分布
-        fig_normal_dist = px.histogram(
-            normal_data,
-            x='total_cost',
-            title="正常业务成本分布",
-            nbins=30,
-            color_discrete_sequence=['#28a745']
-        )
-        fig_normal_dist.update_layout(
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            font_color='black'
-        )
-        st.plotly_chart(fig_normal_dist, use_container_width=True, key="normal_cost_distribution")
-        
-        # 正常业务详细数据
-        st.subheader("正常业务详细数据")
-        normal_summary = normal_data.groupby('business_type').agg({
-            'total_cost': ['mean', 'count'],
-            'efficiency_ratio': 'mean',
-            'distance_km': 'mean'
-        }).round(2)
-        
-        normal_summary.columns = ['平均成本', '业务量', '平均效率', '平均距离']
-        st.dataframe(normal_summary, use_container_width=True)
-
 with anomaly_tabs[2]:
     st.subheader("🚨 异常详情分析")
     
@@ -2794,7 +2747,7 @@ with anomaly_tabs[2]:
                 plot_bgcolor='white',
                 font_color='black'
             )
-            st.plotly_chart(fig_anomaly_cost, use_container_width=True, key="anomaly_cost_box")
+            st.plotly_chart(fig_anomaly_cost, use_container_width=True, key="anomaly_cost_box_details")
         
         with col_anom2:
             fig_anomaly_scatter = px.scatter(
