@@ -606,6 +606,9 @@ def generate_sample_data():
         df['over_distance_cost']
     ) * df['scenario_multiplier'] * df['time_weight']
     df['cost_per_km'] = df['total_cost'] / df['distance_km']
+    
+    # 添加日期列（从start_time提取）
+    df['date'] = df['start_time'].dt.date
 
     return df
 
@@ -2659,6 +2662,9 @@ with anomaly_tabs[4]:
     anomaly_data = df[df['is_anomaly']].copy()
     
     if len(anomaly_data) > 0:
+        # 从start_time提取日期信息
+        anomaly_data['date'] = anomaly_data['start_time'].dt.date
+        
         # 按日期统计异常数量
         anomaly_daily = anomaly_data.groupby('date').size().reset_index(name='anomaly_count')
         
