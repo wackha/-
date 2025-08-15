@@ -2767,6 +2767,123 @@ with anomaly_tabs[2]:
 
 with anomaly_tabs[3]:
     st.subheader("🔍 异常特征深度分析")
+    
+    anomaly_data = df[df['is_anomaly']]
+    
+    if len(anomaly_data) > 0:
+        # 异常特征统计分析
+        col_feat1, col_feat2, col_feat3 = st.columns(3)
+        
+        with col_feat1:
+            avg_anomaly_cost = anomaly_data['total_cost'].mean()
+            avg_normal_cost = df[~df['is_anomaly']]['total_cost'].mean()
+            cost_increase = ((avg_anomaly_cost - avg_normal_cost) / avg_normal_cost * 100)
+            st.metric("异常业务平均成本增幅", f"{cost_increase:.1f}%", f"¥{avg_anomaly_cost:,.0f}")
+        
+        with col_feat2:
+            avg_anomaly_distance = anomaly_data['distance_km'].mean()
+            avg_normal_distance = df[~df['is_anomaly']]['distance_km'].mean()
+            distance_increase = ((avg_anomaly_distance - avg_normal_distance) / avg_normal_distance * 100)
+            st.metric("异常业务平均距离增幅", f"{distance_increase:.1f}%", f"{avg_anomaly_distance:.1f}km")
+        
+        with col_feat3:
+            avg_anomaly_efficiency = anomaly_data['efficiency_ratio'].mean()
+            avg_normal_efficiency = df[~df['is_anomaly']]['efficiency_ratio'].mean()
+            efficiency_decrease = ((avg_normal_efficiency - avg_anomaly_efficiency) / avg_normal_efficiency * 100)
+            st.metric("异常业务效率下降", f"{efficiency_decrease:.1f}%", f"{avg_anomaly_efficiency:.3f}")
+        
+        # 异常特征分布对比
+        st.subheader("异常vs正常业务特征对比")
+        
+        col_comp1, col_comp2 = st.columns(2)
+        
+        with col_comp1:
+            # 成本分布对比
+            fig_cost_comparison = px.histogram(
+                df,
+                x='total_cost',
+                color='is_anomaly',
+                nbins=30,
+                title="成本分布对比",
+                color_discrete_map={True: '#dc3545', False: '#28a745'},
+                barmode='overlay',
+                opacity=0.7
+            )
+            fig_cost_comparison.update_layout(
+                paper_bgcolor='white',
+                plot_bgcolor='white',
+                font_color='black',
+                legend_title_text="异常业务"
+            )
+            st.plotly_chart(fig_cost_comparison, use_container_width=True, key="anomaly_cost_comparison")
+        
+        with col_comp2:
+            # 效率分布对比
+            fig_efficiency_comparison = px.histogram(
+                df,
+                x='efficiency_ratio',
+                color='is_anomaly',
+                nbins=30,
+                title="效率分布对比",
+                color_discrete_map={True: '#dc3545', False: '#28a745'},
+                barmode='overlay',
+                opacity=0.7
+            )
+            fig_efficiency_comparison.update_layout(
+                paper_bgcolor='white',
+                plot_bgcolor='white',
+                font_color='black',
+                legend_title_text="异常业务"
+            )
+            st.plotly_chart(fig_efficiency_comparison, use_container_width=True, key="anomaly_efficiency_comparison")
+        
+        # 异常业务热力图分析
+        st.subheader("异常业务区域-业务类型热力图")
+        
+        # 创建异常业务的交叉表
+        anomaly_crosstab = pd.crosstab(anomaly_data['region'], anomaly_data['business_type'])
+        
+        fig_heatmap = px.imshow(
+            anomaly_crosstab.values,
+            x=anomaly_crosstab.columns,
+            y=anomaly_crosstab.index,
+            color_continuous_scale='Reds',
+            title="各区域各业务类型异常数量热力图",
+            text_auto=True
+        )
+        fig_heatmap.update_layout(
+            paper_bgcolor='white',
+            plot_bgcolor='white',
+            font_color='black'
+        )
+        st.plotly_chart(fig_heatmap, use_container_width=True, key="anomaly_region_business_heatmap")
+        
+        # 异常特征相关性分析
+        st.subheader("异常特征相关性矩阵")
+        
+        # 计算数值特征的相关性
+        numeric_features = ['total_cost', 'distance_km', 'time_duration', 'efficiency_ratio']
+        anomaly_numeric = anomaly_data[numeric_features]
+        correlation_matrix = anomaly_numeric.corr()
+        
+        fig_corr = px.imshow(
+            correlation_matrix.values,
+            x=correlation_matrix.columns,
+            y=correlation_matrix.index,
+            color_continuous_scale='RdBu',
+            title="异常业务特征相关性",
+            text_auto='.3f',
+            aspect="auto"
+        )
+        fig_corr.update_layout(
+            paper_bgcolor='white',
+            plot_bgcolor='white',
+            font_color='black'
+        )
+        st.plotly_chart(fig_corr, use_container_width=True, key="anomaly_correlation_matrix")
+        
+    else:
+        st.info("当前数据中无异常业务记录，无法进行特征分析")
 
 with anomaly_tabs[4]:
     st.subheader("� 异常趋势分析")
