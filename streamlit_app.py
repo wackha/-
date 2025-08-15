@@ -2763,7 +2763,7 @@ with anomaly_tabs[2]:
                 plot_bgcolor='white',
                 font_color='black'
             )
-            st.plotly_chart(fig_anomaly_scatter, use_container_width=True, key="anomaly_distance_cost_scatter")
+            st.plotly_chart(fig_anomaly_scatter, use_container_width=True, key="anomaly_distance_cost_scatter_details")
 
 with anomaly_tabs[3]:
     st.subheader("🔍 异常特征深度分析")
