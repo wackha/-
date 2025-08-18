@@ -607,6 +607,27 @@ def generate_sample_data():
     ) * df['scenario_multiplier'] * df['time_weight']
     df['cost_per_km'] = df['total_cost'] / df['distance_km']
     
+    # 生成异常原因（在成本计算完成后）
+    anomaly_reasons = []
+    for i in range(n_records):
+        if df.loc[i, 'is_anomaly']:
+            # 根据业务特征生成合理的异常原因
+            if df.loc[i, 'total_cost'] > df['total_cost'].quantile(0.9):
+                reasons = ['设备故障延误', '路线拥堵严重', '人员配置不足', '紧急调度变更']
+            elif df.loc[i, 'time_duration'] > df['time_duration'].quantile(0.85):
+                reasons = ['操作流程复杂', '等待时间过长', '交接手续繁琐', '安全检查延时']
+            elif df.loc[i, 'distance_km'] > df['distance_km'].quantile(0.8):
+                reasons = ['最优路线受阻', '临时改道', 'GPS导航偏差', '交通管制影响']
+            elif df.loc[i, 'efficiency_ratio'] < 0.3:
+                reasons = ['人员操作失误', '系统响应缓慢', '协调配合问题', '应急预案启动']
+            else:
+                reasons = ['天气因素影响', '客户特殊要求', '监管部门检查', '突发安全事件']
+            anomaly_reasons.append(np.random.choice(reasons))
+        else:
+            anomaly_reasons.append('正常')
+    
+    df['anomaly_reason'] = anomaly_reasons
+    
     # 添加日期列（从start_time提取）
     df['date'] = df['start_time'].dt.date
 
@@ -2464,8 +2485,8 @@ with anomaly_tabs[2]:
         st.subheader("异常业务详细列表")
         
         # 选择要显示的列
-        display_columns = ['业务类型', '区域', '总成本', '距离(km)', '时长(分钟)', '效率比率']
-        anomaly_display = anomaly_data[['business_type', 'region', 'total_cost', 'distance_km', 'time_duration', 'efficiency_ratio']].copy()
+        display_columns = ['业务类型', '区域', '总成本', '距离(km)', '时长(分钟)', '效率比率', '异常原因']
+        anomaly_display = anomaly_data[['business_type', 'region', 'total_cost', 'distance_km', 'time_duration', 'efficiency_ratio', 'anomaly_reason']].copy()
         anomaly_display.columns = display_columns
         
         # 格式化数值
@@ -2631,8 +2652,8 @@ with anomaly_tabs[2]:
         st.subheader("异常业务详细列表")
         
         # 选择要显示的列
-        display_columns = ['业务类型', '区域', '总成本', '距离(km)', '时长(分钟)', '效率比率']
-        anomaly_display = anomaly_data[['business_type', 'region', 'total_cost', 'distance_km', 'time_duration', 'efficiency_ratio']].copy()
+        display_columns = ['业务类型', '区域', '总成本', '距离(km)', '时长(分钟)', '效率比率', '异常原因']
+        anomaly_display = anomaly_data[['business_type', 'region', 'total_cost', 'distance_km', 'time_duration', 'efficiency_ratio', 'anomaly_reason']].copy()
         anomaly_display.columns = display_columns
         
         # 格式化数值
