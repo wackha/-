@@ -1340,6 +1340,24 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# 实时时间显示和自动刷新
+current_time_container = st.container()
+with current_time_container:
+    col_time1, col_time2, col_time3 = st.columns([1, 2, 1])
+    with col_time2:
+        current_datetime = datetime.now()
+        st.info(f"🕒 系统实时时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} （北京时间）")
+
+# 自动刷新脚本
+st.markdown("""
+<script>
+// 每30秒自动刷新页面以更新时间
+setTimeout(function() {
+    window.location.reload(true);
+}, 30000);
+</script>
+""", unsafe_allow_html=True)
+
 # 生成数据
 df = generate_sample_data()
 historical_df = generate_extended_historical_data(60)
@@ -2775,8 +2793,17 @@ with col_status2:
     st.metric("系统响应时间", "<2秒", "性能优秀")
 
 with col_status3:
-    current_time = datetime.now().strftime("%H:%M:%S")
-    st.metric("当前系统时间", current_time, "北京时间")
+    # 实时系统时间显示
+    current_datetime = datetime.now()
+    current_time = current_datetime.strftime("%H:%M:%S")
+    current_date = current_datetime.strftime("%Y-%m-%d")
+    current_full = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+    
+    st.metric("当前系统时间", current_full, "北京时间")
+    
+    # 添加自动刷新提示
+    with st.empty():
+        st.caption(f"⏰ 实时更新：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')}")
 
 with col_status4:
     st.metric("模型准确率", f"{np.random.uniform(85, 95):.1f}%", "稳定运行")
