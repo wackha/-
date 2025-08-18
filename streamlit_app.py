@@ -2637,148 +2637,31 @@ with anomaly_tabs[4]:
             with col_pred3:
                 predicted_tomorrow = moving_avg * 1.1 if trend == "上升" else moving_avg * 0.9
                 st.metric("明日预测异常数", f"{predicted_tomorrow:.0f}")
+        
+        # 异常预警阈值设置
+        st.subheader("⚠️ 异常预警设置")
+        
+        warning_cols = st.columns(3)
+        
+        with warning_cols[0]:
+            cost_threshold = st.number_input("成本异常阈值(元)", value=2000, step=100)
+            cost_anomalies = len(df[df['total_cost'] > cost_threshold])
+            st.info(f"当前超过阈值的业务：{cost_anomalies}个")
+        
+        with warning_cols[1]:
+            efficiency_threshold = st.number_input("效率异常阈值", value=0.5, step=0.1, format="%.2f")
+            efficiency_anomalies = len(df[df['efficiency_ratio'] < efficiency_threshold])
+            st.info(f"当前低于阈值的业务：{efficiency_anomalies}个")
+        
+        with warning_cols[2]:
+            time_threshold = st.number_input("时长异常阈值(分钟)", value=180, step=30)
+            time_anomalies = len(df[df['time_duration'] > time_threshold])
+            st.info(f"当前超过阈值的业务：{time_anomalies}个")
     else:
         st.info("当前数据中无异常业务记录")
 
 # 结束异常诊断中心
 
-with anomaly_tabs[2]:
-    st.subheader("🚨 异常详情分析")
-    
-    anomaly_data = df[df['is_anomaly']]
-    
-    if len(anomaly_data) > 0:
-        # 异常业务详细列表
-        st.subheader("异常业务详细列表")
-        
-        # 选择要显示的列
-        display_columns = ['业务类型', '区域', '总成本', '距离(km)', '时长(分钟)', '效率比率', '异常原因']
-        anomaly_display = anomaly_data[['business_type', 'region', 'total_cost', 'distance_km', 'time_duration', 'efficiency_ratio', 'anomaly_reason']].copy()
-        anomaly_display.columns = display_columns
-        
-        # 格式化数值
-        anomaly_display['总成本'] = anomaly_display['总成本'].apply(lambda x: f"¥{x:,.0f}")
-        anomaly_display['距离(km)'] = anomaly_display['距离(km)'].round(1)
-        anomaly_display['时长(分钟)'] = anomaly_display['时长(分钟)'].round(0)
-        anomaly_display['效率比率'] = anomaly_display['效率比率'].round(3)
-        
-        st.dataframe(anomaly_display.head(20), use_container_width=True)
-        
-        # 异常业务成本分析
-        col_anom1, col_anom2 = st.columns(2)
-        
-        with col_anom1:
-            fig_anomaly_cost = px.box(
-                anomaly_data,
-                y='total_cost',
-                title="异常业务成本箱线图",
-                color_discrete_sequence=['#dc3545']
-            )
-            fig_anomaly_cost.update_layout(
-                paper_bgcolor='white',
-                plot_bgcolor='white',
-                font_color='black'
-            )
-            st.plotly_chart(fig_anomaly_cost, use_container_width=True, key="anomaly_cost_box_details")
-        
-        with col_anom2:
-            fig_anomaly_scatter = px.scatter(
-                anomaly_data,
-                x='distance_km',
-                y='total_cost',
-                color='business_type',
-                title="异常业务距离vs成本关系",
-                size='time_duration'
-            )
-            fig_anomaly_scatter.update_layout(
-                paper_bgcolor='white',
-                plot_bgcolor='white',
-                font_color='black'
-            )
-            st.plotly_chart(fig_anomaly_scatter, use_container_width=True, key="anomaly_distance_cost_scatter_details")
-
-with anomaly_tabs[4]:
-    st.subheader("🔒 异常趋势分析")
-    
-    # 模拟时间序列异常趋势
-    dates = pd.date_range(start='2024-01-01', periods=30, freq='D')
-    
-    # 生成模拟的每日异常数量
-    daily_anomalies = np.random.poisson(lam=3, size=30)  # 平均每天3个异常
-    daily_total = np.random.poisson(lam=50, size=30)    # 平均每天50个业务
-    anomaly_rates = (daily_anomalies / daily_total * 100)
-    
-    trend_data = pd.DataFrame({
-        'date': dates,
-        'anomaly_count': daily_anomalies,
-        'total_count': daily_total,
-        'anomaly_rate': anomaly_rates
-    })
-    
-    # 异常数量趋势
-    col_trend1, col_trend2 = st.columns(2)
-    
-    with col_trend1:
-        fig_anomaly_trend = px.line(
-            trend_data,
-            x='date',
-            y='anomaly_count',
-            title="30天异常数量趋势",
-            markers=True
-        )
-        fig_anomaly_trend.update_traces(
-            line_color='#dc3545',
-            marker_color='#a71d2a'
-        )
-        fig_anomaly_trend.update_layout(
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            font_color='black'
-        )
-        st.plotly_chart(fig_anomaly_trend, use_container_width=True, key="anomaly_count_trend")
-    
-    with col_trend2:
-        fig_anomaly_rate_trend = px.line(
-            trend_data,
-            x='date',
-            y='anomaly_rate',
-            title="异常率变化趋势(%)",
-            markers=True
-        )
-        fig_anomaly_rate_trend.update_traces(
-            line_color='#fd7e14',
-            marker_color='#e36414'
-        )
-        fig_anomaly_rate_trend.update_layout(
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            font_color='black'
-        )
-        st.plotly_chart(fig_anomaly_rate_trend, use_container_width=True, key="anomaly_rate_trend")
-    
-    # 异常预警阈值设置
-    st.subheader("⚠️ 异常预警设置")
-    
-    warning_cols = st.columns(3)
-    
-    with warning_cols[0]:
-        cost_threshold = st.number_input("成本异常阈值(元)", value=2000, step=100)
-        cost_anomalies = len(df[df['total_cost'] > cost_threshold])
-        st.info(f"当前超过阈值的业务：{cost_anomalies}个")
-    
-    with warning_cols[1]:
-        efficiency_threshold = st.number_input("效率异常阈值", value=0.5, step=0.1, format="%.2f")
-        efficiency_anomalies = len(df[df['efficiency_ratio'] < efficiency_threshold])
-        st.info(f"当前低于阈值的业务：{efficiency_anomalies}个")
-    
-    with warning_cols[2]:
-        time_threshold = st.number_input("时长异常阈值(分钟)", value=180, step=30)
-        time_anomalies = len(df[df['time_duration'] > time_threshold])
-        st.info(f"当前超过阈值的业务：{time_anomalies}个")
-
-st.markdown("---")
-
-st.markdown("---")
 
 # ==================== 底部控制面板 ====================
 st.subheader("🎮 系统控制面板")
