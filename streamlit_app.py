@@ -1715,79 +1715,79 @@ with col_risk4:
 # 蒙特卡洛模拟区
 st.subheader("🎲 蒙特卡洛优化模拟（10万次）")
 
-if st.button("🚀 启动蒙特卡洛模拟", type="primary"):
-    mc_results, mc_data = run_monte_carlo_optimization(100000)
+# 直接运行蒙特卡洛模拟
+mc_results, mc_data = run_monte_carlo_optimization(100000)
+
+col_mc1, col_mc2, col_mc3 = st.columns(3)
+
+with col_mc1:
+    st.metric(
+        "路线优化潜力",
+        f"{mc_results['route_optimization']['mean']:.1f}%",
+        f"最高可达{mc_results['route_optimization']['p95']:.1f}%"
+    )
+
+with col_mc2:
+    st.metric(
+        "排班优化潜力", 
+        f"{mc_results['schedule_optimization']['mean']:.1f}%",
+        f"最高可达{mc_results['schedule_optimization']['p95']:.1f}%"
+    )
+
+with col_mc3:
+    st.metric(
+        "风险控制优化",
+        f"{mc_results['risk_optimization']['mean']:.1f}%",
+        f"最高可达{mc_results['risk_optimization']['p95']:.1f}%"
+    )
+
+# 模拟结果可视化
+col_chart1, col_chart2 = st.columns(2)
+
+with col_chart1:
+    fig_mc_dist = px.histogram(
+        mc_data,
+        x='total_percentage',
+        title="总体优化效果分布",
+        nbins=50,
+        color_discrete_sequence=['#007bff']
+    )
+    fig_mc_dist.update_layout(
+        paper_bgcolor='white',
+        plot_bgcolor='white',
+        font_color='black'
+    )
+    st.plotly_chart(fig_mc_dist, use_container_width=True, key="risk_mc_distribution")
+
+with col_chart2:
+    optimization_summary = pd.DataFrame({
+        '优化类型': ['路线优化', '排班优化', '风险控制'],
+        '平均节约': [
+            mc_results['route_optimization']['savings_amount'],
+            mc_results['schedule_optimization']['savings_amount'],
+            mc_results['risk_optimization']['savings_amount']
+        ],
+        '优化比例': [
+            mc_results['route_optimization']['mean'],
+            mc_results['schedule_optimization']['mean'],
+            mc_results['risk_optimization']['mean']
+        ]
+    })
     
-    col_mc1, col_mc2, col_mc3 = st.columns(3)
-    
-    with col_mc1:
-        st.metric(
-            "路线优化潜力",
-            f"{mc_results['route_optimization']['mean']:.1f}%",
-            f"最高可达{mc_results['route_optimization']['p95']:.1f}%"
-        )
-    
-    with col_mc2:
-        st.metric(
-            "排班优化潜力", 
-            f"{mc_results['schedule_optimization']['mean']:.1f}%",
-            f"最高可达{mc_results['schedule_optimization']['p95']:.1f}%"
-        )
-    
-    with col_mc3:
-        st.metric(
-            "风险控制优化",
-            f"{mc_results['risk_optimization']['mean']:.1f}%",
-            f"最高可达{mc_results['risk_optimization']['p95']:.1f}%"
-        )
-    
-    # 模拟结果可视化
-    col_chart1, col_chart2 = st.columns(2)
-    
-    with col_chart1:
-        fig_mc_dist = px.histogram(
-            mc_data,
-            x='total_percentage',
-            title="总体优化效果分布",
-            nbins=50,
-            color_discrete_sequence=['#007bff']
-        )
-        fig_mc_dist.update_layout(
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            font_color='black'
-        )
-        st.plotly_chart(fig_mc_dist, use_container_width=True, key="risk_mc_distribution")
-    
-    with col_chart2:
-        optimization_summary = pd.DataFrame({
-            '优化类型': ['路线优化', '排班优化', '风险控制'],
-            '平均节约': [
-                mc_results['route_optimization']['savings_amount'],
-                mc_results['schedule_optimization']['savings_amount'],
-                mc_results['risk_optimization']['savings_amount']
-            ],
-            '优化比例': [
-                mc_results['route_optimization']['mean'],
-                mc_results['schedule_optimization']['mean'],
-                mc_results['risk_optimization']['mean']
-            ]
-        })
-        
-        fig_opt_summary = px.bar(
-            optimization_summary,
-            x='优化类型',
-            y='优化比例',
-            title="各类优化方案效果对比",
-            color='优化比例',
-            color_continuous_scale='Viridis'
-        )
-        fig_opt_summary.update_layout(
-            paper_bgcolor='white',
-            plot_bgcolor='white',
-            font_color='black'
-        )
-        st.plotly_chart(fig_opt_summary, use_container_width=True, key="risk_optimization_summary")
+    fig_opt_summary = px.bar(
+        optimization_summary,
+        x='优化类型',
+        y='优化比例',
+        title="各类优化方案效果对比",
+        color='优化比例',
+        color_continuous_scale='Viridis'
+    )
+    fig_opt_summary.update_layout(
+        paper_bgcolor='white',
+        plot_bgcolor='white',
+        font_color='black'
+    )
+    st.plotly_chart(fig_opt_summary, use_container_width=True, key="risk_optimization_summary")
 
 # 场景影响分析
 st.subheader("🌊 场景影响分析与预测验证")
@@ -2272,95 +2272,6 @@ if len(high_cost_businesses) > 0:
             <p>占比: {len(high_cost_businesses)/len(df)*100:.2f}%</p>
         </div>
         """, unsafe_allow_html=True)
-
-# 蒙特卡洛模拟区 - 直方图+节约分布
-st.subheader("🔄 蒙特卡洛模拟与优化分析")
-
-col_monte1, col_monte2 = st.columns(2)
-
-with col_monte1:
-    # P95优化潜力指示器
-    optimization_potential = cost_optimization['optimization_potential'] * 100
-    st.markdown(f"""
-    <div style='
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        border-radius: 15px;
-        padding: 25px;
-        text-align: center;
-        color: white;
-        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
-        margin: 10px 0;
-    '>
-        <h3>🎯 优化潜力分析</h3>
-        <h1 style='font-size: 2.5rem; margin: 10px 0;'>{optimization_potential:.2f}%</h1>
-        <p>预计节约 ¥{total_cost * cost_optimization['cost_reduction_estimate']:,.0f}</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col_monte2:
-    # 预警参数配置
-    st.write("**⚙️ 预警参数配置**")
-    warning_threshold = st.slider("成本预警阈值(百分位)", 80, 95, 90, key="risk_warning_threshold")
-    alert_threshold = st.slider("紧急预警阈值(百分位)", 90, 99, 95, key="risk_alert_threshold")
-
-# 10万次迭代蒙特卡洛模拟
-if st.button("▶️ 启动10万次迭代优化", key="monte_carlo_risk_simulation"):
-    with st.spinner("正在运行10万次蒙特卡洛模拟..."):
-        optimization_results, detailed_results = run_monte_carlo_optimization(100000)
-        
-        total_savings = optimization_results['total_optimization']['mean']
-        
-        # 蒙特卡洛优化直方图（路线/排班/风险节约）
-        col_result1, col_result2 = st.columns(2)
-        
-        with col_result1:
-            fig_opt_dist = px.histogram(
-                detailed_results, 
-                x='total_percentage',
-                title=f"10万次模拟：总体优化效果分布",
-                nbins=50,
-                color_discrete_sequence=['#28a745']
-            )
-            fig_opt_dist.add_vline(
-                x=total_savings, 
-                line_dash="dash", 
-                line_color="red",
-                annotation_text=f"平均: {total_savings:.2f}%"
-            )
-            fig_opt_dist.update_layout(
-                paper_bgcolor='white',
-                plot_bgcolor='white',
-                font_color='black'
-            )
-            st.plotly_chart(fig_opt_dist, use_container_width=True, key="risk_simulation_monte_carlo_histogram")
-        
-        with col_result2:
-            # 显示详细节约分布
-            savings_breakdown = pd.DataFrame({
-                '优化类型': ['路线优化', '排班优化', '风险控制'],
-                '平均节约率': [
-                    optimization_results['route_optimization']['mean'],
-                    optimization_results['schedule_optimization']['mean'],
-                    optimization_results['risk_optimization']['mean']
-                ]
-            })
-            
-            fig_breakdown = px.bar(
-                savings_breakdown,
-                x='优化类型',
-                y='平均节约率',
-                title="三类优化节约率分布",
-                color='平均节约率',
-                color_continuous_scale='Greens'
-            )
-            fig_breakdown.update_layout(
-                paper_bgcolor='white',
-                plot_bgcolor='white',
-                font_color='black'
-            )
-            st.plotly_chart(fig_breakdown, use_container_width=True, key="risk_simulation_breakdown")
-        
-        st.success(f"✅ 模拟完成：成本节约潜力 {total_savings:.2f}%")
 
 # 场景影响分析区 - 场景聚合表
 st.subheader("🌊 市场冲击场景影响分析")
