@@ -2586,6 +2586,78 @@ with anomaly_tabs[3]:
                 yaxis_title="异常数量"
             )
             st.plotly_chart(fig_anomaly_time, use_container_width=True, key="anomaly_time_bar")
+        
+        # 异常原因统计表
+        st.subheader("📋 异常原因统计分析")
+        
+        if 'anomaly_reason' in anomaly_data.columns:
+            # 异常原因统计
+            reason_counts = anomaly_data['anomaly_reason'].value_counts().reset_index()
+            reason_counts.columns = ['异常原因', '出现次数']
+            reason_counts['占比(%)'] = (reason_counts['出现次数'] / len(anomaly_data) * 100).round(1)
+            
+            # 显示统计表
+            col_reason1, col_reason2 = st.columns([2, 1])
+            
+            with col_reason1:
+                st.dataframe(reason_counts, use_container_width=True, hide_index=True)
+            
+            with col_reason2:
+                # 异常原因饼图
+                fig_reason_pie = px.pie(
+                    reason_counts.head(8),  # 只显示前8个最常见的原因
+                    values='出现次数',
+                    names='异常原因',
+                    title="异常原因分布",
+                    color_discrete_sequence=px.colors.qualitative.Set3
+                )
+                fig_reason_pie.update_layout(
+                    paper_bgcolor='white',
+                    plot_bgcolor='white',
+                    font_color='black',
+                    showlegend=False  # 隐藏图例以节省空间
+                )
+                st.plotly_chart(fig_reason_pie, use_container_width=True, key="anomaly_reason_pie")
+            
+            # 按业务类型分组的异常原因分析
+            st.subheader("🔍 按业务类型的异常原因分析")
+            
+            reason_by_business = anomaly_data.groupby(['business_type', 'anomaly_reason']).size().reset_index(name='count')
+            reason_pivot = reason_by_business.pivot(index='business_type', columns='anomaly_reason', values='count').fillna(0)
+            
+            # 转换为百分比显示
+            reason_pivot_pct = reason_pivot.div(reason_pivot.sum(axis=1), axis=0) * 100
+            reason_pivot_pct = reason_pivot_pct.round(1)
+            
+            st.dataframe(reason_pivot_pct, use_container_width=True)
+            
+            # 异常原因趋势分析（如果有时间维度）
+            st.subheader("📈 异常原因趋势分析")
+            
+            # 按日期和异常原因统计
+            if 'start_time' in anomaly_data.columns:
+                anomaly_data['date'] = anomaly_data['start_time'].dt.date
+                daily_reason = anomaly_data.groupby(['date', 'anomaly_reason']).size().reset_index(name='count')
+                
+                # 堆叠柱状图显示每日各种异常原因数量
+                fig_reason_trend = px.bar(
+                    daily_reason,
+                    x='date',
+                    y='count',
+                    color='anomaly_reason',
+                    title="每日异常原因分布趋势",
+                    color_discrete_sequence=px.colors.qualitative.Set3
+                )
+                fig_reason_trend.update_layout(
+                    paper_bgcolor='white',
+                    plot_bgcolor='white',
+                    font_color='black',
+                    xaxis_title="日期",
+                    yaxis_title="异常数量"
+                )
+                st.plotly_chart(fig_reason_trend, use_container_width=True, key="anomaly_reason_trend")
+        else:
+            st.info("当前数据中未包含异常原因信息")
 
 with anomaly_tabs[4]:
     st.subheader("📈 异常趋势与预测")
