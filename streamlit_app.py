@@ -4,7 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import time
 from sklearn.ensemble import RandomForestRegressor
 
@@ -359,7 +359,9 @@ def calculate_over_distance_cost(actual_distance, standard_distance, business_ty
 def generate_business_hours_timestamps(n_records):
     """生成符合业务时间规律的时间戳，主要在7-18点，早上和下午业务量更多"""
     timestamps = []
-    base_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    # 使用北京时区
+    beijing_tz = timezone(timedelta(hours=8))
+    base_date = datetime.now(beijing_tz).replace(hour=0, minute=0, second=0, microsecond=0)
     
     # 定义每小时的业务权重（7-18点）
     hour_weights = {
@@ -646,7 +648,9 @@ def generate_extended_historical_data(days=60):
     base_anomaly_rate = 0.08
     
     for day in range(days):
-        date = datetime.now() - timedelta(days=day)
+        # 使用北京时区
+        beijing_tz = timezone(timedelta(hours=8))
+        date = datetime.now(beijing_tz) - timedelta(days=day)
         
         day_of_week = date.weekday()
         weekly_factor = 1.0 + 0.2 * np.sin(2 * np.pi * day_of_week / 7)
@@ -1345,7 +1349,9 @@ current_time_container = st.container()
 with current_time_container:
     col_time1, col_time2, col_time3 = st.columns([1, 2, 1])
     with col_time2:
-        current_datetime = datetime.now()
+        # 获取北京时间 (UTC+8)
+        beijing_tz = timezone(timedelta(hours=8))
+        current_datetime = datetime.now(beijing_tz)
         st.info(f"🕒 系统实时时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} （北京时间）")
 
 # 自动刷新脚本
@@ -2793,8 +2799,9 @@ with col_status2:
     st.metric("系统响应时间", "<2秒", "性能优秀")
 
 with col_status3:
-    # 实时系统时间显示
-    current_datetime = datetime.now()
+    # 实时系统时间显示 - 北京时区
+    beijing_tz = timezone(timedelta(hours=8))
+    current_datetime = datetime.now(beijing_tz)
     current_time = current_datetime.strftime("%H:%M:%S")
     current_date = current_datetime.strftime("%Y-%m-%d")
     current_full = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
