@@ -600,11 +600,11 @@ def generate_sample_data():
     df['scenario_multiplier'] = df['market_scenario'].map({
         '正常': 1.0, '高需求期': 1.1, '紧急状况': 1.5, '节假日': 1.5
     })
+    # 修复：去掉 over_distance_cost，避免与 vehicle_cost 内含的超公里费用重复计入
     df['total_cost'] = (
         df['vehicle_cost'] + 
         df['labor_cost'] + 
-        df['equipment_cost'] + 
-        df['over_distance_cost']
+        df['equipment_cost']
     ) * df['scenario_multiplier'] * df['time_weight']
     df['cost_per_km'] = df['total_cost'] / df['distance_km']
     
