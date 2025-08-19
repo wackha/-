@@ -1347,10 +1347,14 @@ current_time_container = st.container()
 with current_time_container:
     col_time1, col_time2, col_time3 = st.columns([1, 2, 1])
     with col_time2:
-        # 使用最简单的本地时间
-        now = datetime.now()
-        st.info(f"🕒 系统当前时间：{now.strftime('%Y年%m月%d日 %H:%M:%S')}")
-        st.caption(f"⏰ 刷新时间：{now.strftime('%H:%M:%S')}")
+        # 强制实时获取当前时间 - 无缓存
+        import time
+        current_timestamp = time.time()
+        now = datetime.fromtimestamp(current_timestamp)
+        
+        st.success(f"🕒 系统当前时间：{now.strftime('%Y年%m月%d日 %H:%M:%S')}")
+        st.info(f"⏰ 时间戳：{current_timestamp}")
+        st.warning(f"🔄 刷新时间：{now.strftime('%H:%M:%S')} - 每次刷新都会更新")
 
 # 自动刷新脚本
 st.markdown("""
@@ -2797,10 +2801,14 @@ with col_status2:
     st.metric("系统响应时间", "<2秒", "性能优秀")
 
 with col_status3:
-    # 使用最简单的本地时间
-    now = datetime.now()
+    # 强制获取实时时间
+    import time
+    timestamp = time.time()
+    now = datetime.fromtimestamp(timestamp)
     time_str = now.strftime("%Y-%m-%d %H:%M:%S")
-    st.metric("当前系统时间", time_str, "实时更新")
+    
+    st.metric("当前系统时间", time_str, f"时间戳:{int(timestamp)}")
+    st.caption(f"🔍 调试: {now.hour}时{now.minute}分{now.second}秒")
 
 with col_status4:
     st.metric("模型准确率", f"{np.random.uniform(85, 95):.1f}%", "稳定运行")
