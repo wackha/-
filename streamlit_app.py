@@ -1674,7 +1674,6 @@ with current_time_container:
         )
         import streamlit.components.v1 as components
         components.html(clock_html, height=80)
-        st.caption("💡 时间每秒自动更新，仅更新时间，不刷新页面")
 
 # 生成数据
 df = generate_sample_data()
@@ -3200,3 +3199,4 @@ with col_status3:
 
 with col_status4:
     st.metric("模型准确率", f"{np.random.uniform(85, 95):.1f}%", "稳定运行")
+
