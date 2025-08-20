@@ -1358,50 +1358,41 @@ current_time_container = st.container()
 with current_time_container:
     col_time1, col_time2, col_time3 = st.columns([1, 2, 1])
     with col_time2:
-        # 显示当前时间 - 使用带ID的容器
+        # 显示当前时间
         current_time_str = display_realtime_clock()
-        st.markdown(f"""
-        <div id="current-time-display" style="background-color: #d1ecf1; color: #0c5460; padding: 12px; border-radius: 4px; border-left: 4px solid #bee5eb;">
-            <strong>🕒 当前时间：<span id="time-value">{current_time_str}</span> (北京时间)</strong>
+        # 使用内嵌 HTML/JS 时钟，仅更新时间，不刷新页面
+        clock_html = (
+            """
+        <div style="display:flex;justify-content:center;align-items:center;padding:8px 12px;background:#f1f7fb;border-radius:8px;border-left:4px solid #007bff;">
+            <div style="color:#0c5460;font-size:1.05rem;font-weight:600;">当前时间：<span id='beijing-time'>"""
+            + current_time_str
+            + """</span> (北京时间)</div>
         </div>
-        """, unsafe_allow_html=True)
-        st.caption("💡 时间每10秒自动更新")
-
-
-# 只刷新时间的JavaScript脚本
-st.markdown("""
-<script>
-function updateTime() {
-    const now = new Date();
-    // 转换为北京时间 (UTC+8)
-    const beijingTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
-    
-    const year = beijingTime.getFullYear();
-    const month = String(beijingTime.getMonth() + 1).padStart(2, '0');
-    const day = String(beijingTime.getDate()).padStart(2, '0');
-    const hours = String(beijingTime.getHours()).padStart(2, '0');
-    const minutes = String(beijingTime.getMinutes()).padStart(2, '0');
-    const seconds = String(beijingTime.getSeconds()).padStart(2, '0');
-    
-    const timeString = `${year}年${month}月${day}日 ${hours}:${minutes}:${seconds}`;
-    
-    // 更新时间显示
-    const timeElement = document.getElementById('time-value');
-    if (timeElement) {
-        timeElement.textContent = timeString;
-    }
-}
-
-// 立即更新一次时间
-updateTime();
-
-// 每10秒更新一次时间
-setInterval(updateTime, 10000);
-
-// 页面获得焦点时也更新时间
-window.addEventListener('focus', updateTime);
-</script>
-""", unsafe_allow_html=True)
+        <script>
+        function updateBeijingTime(){
+            var now = new Date();
+            var beijing = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+            var Y = beijing.getFullYear();
+            var M = String(beijing.getMonth()+1).padStart(2,'0');
+            var D = String(beijing.getDate()).padStart(2,'0');
+            var h = String(beijing.getHours()).padStart(2,'0');
+            var m = String(beijing.getMinutes()).padStart(2,'0');
+            var s = String(beijing.getSeconds()).padStart(2,'0');
+            var text = Y + '年' + M + '月' + D + '日 ' + h + ':' + m + ':' + s;
+            var el = document.getElementById('beijing-time');
+            if(el) el.textContent = text;
+        }
+        updateBeijingTime();
+        // 每秒更新时间，不刷新页面
+        setInterval(updateBeijingTime, 1000);
+        // 页面获得焦点时立即更新时间
+        window.addEventListener('focus', updateBeijingTime);
+        </script>
+        """
+        )
+        import streamlit.components.v1 as components
+        components.html(clock_html, height=80)
+        st.caption("💡 时间每秒自动更新，仅更新时间，不刷新页面")
 
 # 生成数据
 df = generate_sample_data()
@@ -1918,7 +1909,9 @@ with col_scenario1:
     fig_scenario_impact.update_layout(
         paper_bgcolor='white',
         plot_bgcolor='white',
-        font_color='black'
+        font_color='black',
+        xaxis_title="市场场景",
+        yaxis_title="总成本 (元)"
     )
     st.plotly_chart(fig_scenario_impact, use_container_width=True, key="risk_scenario_impact")
 
@@ -2084,7 +2077,9 @@ with col5:
         paper_bgcolor='white',
         plot_bgcolor='white',
         font_color='black',
-        barmode='overlay'
+        barmode='overlay',
+        xaxis_title="总成本 (元)",
+        yaxis_title="数据条数"
     )
     st.plotly_chart(fig_anomaly, use_container_width=True, key="comprehensive_anomaly_analysis")
 
@@ -2105,7 +2100,9 @@ with col6:
     fig_scenario.update_layout(
         paper_bgcolor='white',
         plot_bgcolor='white',
-        font_color='black'
+        font_color='black',
+        xaxis_title="市场场景",
+        yaxis_title="平均成本 (元)"
     )
     st.plotly_chart(fig_scenario, use_container_width=True, key="comprehensive_market_scenario")
 
