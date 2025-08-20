@@ -1343,56 +1343,40 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 实时时间显示和自动刷新
+import time
+import asyncio
+
+# 实时时钟显示函数
+def display_realtime_clock():
+    # 获取正确的北京时间 (UTC+8)
+    from datetime import datetime, timedelta
+    utc_now = datetime.utcnow()
+    beijing_time = utc_now + timedelta(hours=8)
+    return beijing_time.strftime('%Y年%m月%d日 %H:%M:%S')
+
 current_time_container = st.container()
 with current_time_container:
     col_time1, col_time2, col_time3 = st.columns([1, 2, 1])
     with col_time2:
-        # 创建一个空的容器用于时间显示
-        time_placeholder = st.empty()
+        # 显示当前时间
+        current_time_str = display_realtime_clock()
+        st.info(f"🕒 当前时间：{current_time_str} (北京时间)")
         
-        # 获取正确的北京时间 (UTC+8)
-        from datetime import datetime, timedelta
-        utc_now = datetime.utcnow()
-        beijing_time = utc_now + timedelta(hours=8)
-        time_placeholder.info(f"🕒 当前时间：{beijing_time.strftime('%Y年%m月%d日 %H:%M:%S')} (北京时间)")
+        # 添加一个自动刷新按钮
+        if st.button("� 刷新时间", key="refresh_time"):
+            st.rerun()
 
-# 自动刷新脚本 - 使用JavaScript实时更新时间
+# 页面底部添加自动刷新提示
+st.sidebar.markdown("### ⏰ 自动更新")
+st.sidebar.info("页面每次操作时自动更新时间\n点击任何按钮或选项都会刷新时间显示")
+
+# 定时刷新脚本（使用HTML meta refresh作为备选）
 st.markdown("""
-<div id="real-time-clock" style="text-align: center; padding: 10px; background-color: #e7f3ff; border-radius: 5px; margin: 10px 0;">
-    <strong id="clock-display">🕒 加载时间中...</strong>
-</div>
-
 <script>
-function updateTime() {
-    const now = new Date();
-    // 转换为北京时间 (UTC+8)
-    const beijingTime = new Date(now.getTime() + (8 * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
-    
-    const year = beijingTime.getFullYear();
-    const month = String(beijingTime.getMonth() + 1).padStart(2, '0');
-    const day = String(beijingTime.getDate()).padStart(2, '0');
-    const hours = String(beijingTime.getHours()).padStart(2, '0');
-    const minutes = String(beijingTime.getMinutes()).padStart(2, '0');
-    const seconds = String(beijingTime.getSeconds()).padStart(2, '0');
-    
-    const timeString = `🕒 当前时间：${year}年${month}月${day}日 ${hours}:${minutes}:${seconds} (北京时间)`;
-    
-    const clockElement = document.getElementById('clock-display');
-    if (clockElement) {
-        clockElement.textContent = timeString;
-    }
-}
-
-// 立即更新时间
-updateTime();
-
-// 每秒更新时间
-setInterval(updateTime, 1000);
-
-// 每30秒自动刷新页面以更新数据
-setInterval(function() {
-    window.location.reload(true);
-}, 30000);
+// 页面加载完成后每10秒自动刷新
+setTimeout(function(){
+    window.location.reload(1);
+}, 10000);
 </script>
 """, unsafe_allow_html=True)
 
@@ -2894,44 +2878,12 @@ with col_status2:
     st.metric("系统响应时间", "<2秒", "性能优秀")
 
 with col_status3:
-    # 创建实时更新的系统时间显示
-    st.markdown("""
-    <div id="system-time-display">
-        <div style="text-align: center;">
-            <div style="color: #262730; font-size: 1.25rem; font-weight: 600;">当前系统时间</div>
-            <div id="system-time" style="color: #262730; font-size: 2rem; font-weight: 400;">加载中...</div>
-            <div style="color: #737373; font-size: 0.875rem;">北京时间</div>
-        </div>
-    </div>
-    
-    <script>
-    function updateSystemTime() {
-        const now = new Date();
-        // 转换为北京时间 (UTC+8)
-        const beijingTime = new Date(now.getTime() + (8 * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
-        
-        const year = beijingTime.getFullYear();
-        const month = String(beijingTime.getMonth() + 1).padStart(2, '0');
-        const day = String(beijingTime.getDate()).padStart(2, '0');
-        const hours = String(beijingTime.getHours()).padStart(2, '0');
-        const minutes = String(beijingTime.getMinutes()).padStart(2, '0');
-        const seconds = String(beijingTime.getSeconds()).padStart(2, '0');
-        
-        const timeString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-        
-        const systemTimeElement = document.getElementById('system-time');
-        if (systemTimeElement) {
-            systemTimeElement.textContent = timeString;
-        }
-    }
-    
-    // 立即更新时间
-    updateSystemTime();
-    
-    // 每秒更新时间
-    setInterval(updateSystemTime, 1000);
-    </script>
-    """, unsafe_allow_html=True)
+    # 获取正确的北京时间 - 实时更新
+    from datetime import datetime, timedelta
+    utc_now = datetime.utcnow()
+    beijing_time = utc_now + timedelta(hours=8)
+    time_str = beijing_time.strftime("%Y-%m-%d %H:%M:%S")
+    st.metric("当前系统时间", time_str, "北京时间 (实时更新)")
 
 with col_status4:
     st.metric("模型准确率", f"{np.random.uniform(85, 95):.1f}%", "稳定运行")
