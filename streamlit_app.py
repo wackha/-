@@ -16,21 +16,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 自动刷新配置
-import time
-refresh_interval = 30  # 30秒刷新一次
-
-# 添加自动刷新机制
-placeholder = st.empty()
-if 'last_refresh' not in st.session_state:
-    st.session_state.last_refresh = time.time()
-
-# 检查是否需要刷新
-current_time = time.time()
-if current_time - st.session_state.last_refresh > refresh_interval:
-    st.session_state.last_refresh = current_time
-    st.rerun()
-
 # [保持所有原有的数据生成和计算函数]
 # 包括：RealDataConnector, CSS样式, 所有距离计算函数等...
 
@@ -1373,35 +1358,48 @@ current_time_container = st.container()
 with current_time_container:
     col_time1, col_time2, col_time3 = st.columns([1, 2, 1])
     with col_time2:
-        # 显示当前时间
+        # 显示当前时间 - 使用带ID的容器
         current_time_str = display_realtime_clock()
-        st.info(f"🕒 当前时间：{current_time_str} (北京时间)")
+        st.markdown(f"""
+        <div id="current-time-display" style="background-color: #d1ecf1; color: #0c5460; padding: 12px; border-radius: 4px; border-left: 4px solid #bee5eb;">
+            <strong>🕒 当前时间：<span id="time-value">{current_time_str}</span> (北京时间)</strong>
+        </div>
+        """, unsafe_allow_html=True)
+        st.caption("💡 时间每10秒自动更新")
 
 
-# 自动刷新脚本 - 30秒自动刷新
-st.markdown("""
-<meta http-equiv="refresh" content="30">
-""", unsafe_allow_html=True)
-
+# 只刷新时间的JavaScript脚本
 st.markdown("""
 <script>
-// 强制刷新 - 多重保险
-setTimeout(function(){
-    window.location.reload(true);
-}, 30000);
-
-setInterval(function(){
-    window.location.reload(true);
-}, 30000);
-
-// 页面可见性API - 当页面重新可见时也刷新
-document.addEventListener('visibilitychange', function() {
-    if (!document.hidden) {
-        setTimeout(function(){
-            window.location.reload(true);
-        }, 1000);
+function updateTime() {
+    const now = new Date();
+    // 转换为北京时间 (UTC+8)
+    const beijingTime = new Date(now.getTime() + (8 * 60 * 60 * 1000));
+    
+    const year = beijingTime.getFullYear();
+    const month = String(beijingTime.getMonth() + 1).padStart(2, '0');
+    const day = String(beijingTime.getDate()).padStart(2, '0');
+    const hours = String(beijingTime.getHours()).padStart(2, '0');
+    const minutes = String(beijingTime.getMinutes()).padStart(2, '0');
+    const seconds = String(beijingTime.getSeconds()).padStart(2, '0');
+    
+    const timeString = `${year}年${month}月${day}日 ${hours}:${minutes}:${seconds}`;
+    
+    // 更新时间显示
+    const timeElement = document.getElementById('time-value');
+    if (timeElement) {
+        timeElement.textContent = timeString;
     }
-});
+}
+
+// 立即更新一次时间
+updateTime();
+
+// 每10秒更新一次时间
+setInterval(updateTime, 10000);
+
+// 页面获得焦点时也更新时间
+window.addEventListener('focus', updateTime);
 </script>
 """, unsafe_allow_html=True)
 
@@ -1865,7 +1863,9 @@ with col_chart1:
     fig_mc_dist.update_layout(
         paper_bgcolor='white',
         plot_bgcolor='white',
-        font_color='black'
+        font_color='black',
+        xaxis_title="优化效果百分比",
+        yaxis_title="频次"
     )
     st.plotly_chart(fig_mc_dist, use_container_width=True, key="risk_mc_distribution")
 
@@ -2057,7 +2057,7 @@ with col4:
 col5, col6 = st.columns(2)
 
 with col5:
-    # 5. 正常vs异常数据对比
+    # 5. 正常与异常数据对比
     normal_data = df[~df['is_anomaly']]
     anomaly_data = df[df['is_anomaly']]
 
@@ -2080,7 +2080,7 @@ with col5:
         ))
 
     fig_anomaly.update_layout(
-        title="5. 正常vs异常数据成本分布",
+        title="5. 正常与异常数据成本分布",
         paper_bgcolor='white',
         plot_bgcolor='white',
         font_color='black',
@@ -2172,7 +2172,7 @@ st.subheader("🎯 预测模型验证与分析")
 col_pred1, col_pred2 = st.columns(2)
 
 with col_pred1:
-    # 预测vs实际对比
+    # 预测与实际对比
     days = pd.date_range(start='2024-01-01', periods=30, freq='D')
     actual_costs = np.random.normal(loc=1000, scale=200, size=30)
     predicted_costs = actual_costs + np.random.normal(0, 50, 30)
@@ -2187,14 +2187,15 @@ with col_pred1:
         pred_comparison_data, 
         x='日期', 
         y=['实际', '预测'],
-        title="预测vs实际成本对比",
-        labels={'value': '成本 (元)', 'variable': '类型'}
+        title="预测与实际成本对比"
     )
     fig_pred_comparison.update_traces(mode='lines+markers')
     fig_pred_comparison.update_layout(
         paper_bgcolor='white',
         plot_bgcolor='white',
         font_color='black',
+        xaxis_title="日期",
+        yaxis_title="成本 (元)",
         legend=dict(
             orientation="h",
             yanchor="bottom",
@@ -2211,14 +2212,15 @@ with col_pred2:
     fig_error_dist = px.histogram(
         x=errors,
         title="预测误差分布",
-        nbins=15,
-        labels={'x': '误差值', 'y': '频次'}
+        nbins=15
     )
     fig_error_dist.update_traces(marker_color='#fd7e14')
     fig_error_dist.update_layout(
         paper_bgcolor='white',
         plot_bgcolor='white',
-        font_color='black'
+        font_color='black',
+        xaxis_title="误差值",
+        yaxis_title="频次"
     )
     st.plotly_chart(fig_error_dist, use_container_width=True, key="comprehensive_error_distribution")
 
@@ -2570,7 +2572,9 @@ with anomaly_tabs[1]:
         fig_normal_dist.update_layout(
             paper_bgcolor='white',
             plot_bgcolor='white',
-            font_color='black'
+            font_color='black',
+            xaxis_title="总成本 (元)",
+            yaxis_title="频次"
         )
         st.plotly_chart(fig_normal_dist, use_container_width=True, key="normal_cost_distribution")
         
@@ -2639,7 +2643,7 @@ with anomaly_tabs[2]:
                 x='距离(公里)',
                 y='总成本',
                 color='业务类型',
-                title="异常业务距离vs成本关系",
+                title="异常业务距离与成本关系",
                 size='时长(分钟)'
             )
             fig_anomaly_scatter.update_layout(
