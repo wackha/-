@@ -784,7 +784,286 @@ def analyze_cost_optimization(df):
             '节假日': 1.5
         }
     }
+    # 使用新增优化引擎（不改变原 total_cost，仅提供参考）
+    try:
+        opt_res = optimize_cost_allocation(df, objective='min_cost_with_anomaly_penalty', anomaly_penalty=0.25)
+        optimization_data['optimized_weights'] = opt_res.get('best_weights_normalized', {})
+        optimization_data['optimized_improvement_pct'] = opt_res.get('improvement_pct', 0)
+    except Exception:
+        pass
     return optimization_data
+
+# ==================== 新增：可配置数据模拟器与分摊优化引擎 ====================
+
+def simulate_configurable_business_data(
+    start_date: datetime = None,
+    days: int = 7,
+    daily_profile: list | None = None,
+    shock_scenarios: list | None = None,
+    seed: int | None = None,
+    base_records_per_day: int = 300
+):
+    """可配置业务数据模拟器（不改变原先 generate_sample_data 的逻辑，仅新增接口）。
+
+    参数:
+        start_date: 起始日期（日期部分有效，默认今天）
+        days: 模拟天数（建议 7-10）
+        daily_profile: 24长度的数组，表示每小时业务量权重；None 时复用既有 7-18 点权重逻辑
+        shock_scenarios: 列表，每个元素: {name, prob, multiplier, target_types(optional)}
+        seed: 随机种子，便于 A/B 测试
+        base_records_per_day: 每天基础记录数（与 generate_sample_data 对齐默认为 300）
+
+    返回:
+        DataFrame: 列包含
+            start_time, business_type, region, distance_km, time_duration, amount,
+            vehicle_cost, labor_cost, equipment_cost, over_distance_cost,
+            standard_distance, over_distance, total_cost(同原逻辑), shock_label,
+            is_anomaly, anomaly_reason
+    """
+    if seed is not None:
+        np.random.seed(seed)
+    if start_date is None:
+        start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    days = max(1, int(days))
+
+    # 业务类型与概率（保持与原函数一致）
+    business_types = ['金库运送', '上门收款', '金库调拨', '现金清点']
+    business_probabilities = [0.45, 0.20, 0.0625, 0.2875]
+
+    # 默认小时权重（复用原 7-18 逻辑），其他小时设极低权重
+    default_hour_weights = {h: 0.01 for h in range(24)}
+    default_hour_weights.update({
+        7:0.15,8:0.20,9:0.18,10:0.12,11:0.10,12:0.05,13:0.08,14:0.15,15:0.18,16:0.16,17:0.12,18:0.08
+    })
+    if daily_profile is not None and len(daily_profile) == 24:
+        hour_probs = np.array(daily_profile, dtype=float)
+        hour_probs = hour_probs / hour_probs.sum()
+    else:
+        # 使用默认映射
+        hour_probs = np.array([default_hour_weights[h] for h in range(24)])
+        hour_probs = hour_probs / hour_probs.sum()
+
+    # 冲击场景配置
+    if shock_scenarios is None:
+        shock_scenarios = [
+            {'name': '高需求期', 'prob': 0.12, 'multiplier': 1.10, 'target_types': None},
+            {'name': '紧急状况', 'prob': 0.05, 'multiplier': 1.45, 'target_types': None},
+            {'name': '节假日', 'prob': 0.08, 'multiplier': 1.50, 'target_types': None}
+        ]
+
+    distance_map = get_pudong_zhoupu_to_districts_distance()
+    regions = list(distance_map.keys())
+
+    records = []
+    for d in range(days):
+        day_date = start_date + timedelta(days=d)
+        # 根据冲击 / 节假日等决定当天是否套用场景（允许多个场景叠加）
+        active_shocks = []
+        cost_multiplier_day = 1.0
+        for sc in shock_scenarios:
+            if np.random.random() < sc.get('prob', 0):
+                active_shocks.append(sc['name'])
+                cost_multiplier_day *= sc.get('multiplier', 1.0)
+
+        n_records_today = base_records_per_day
+        for i in range(n_records_today):
+            # 小时选择
+            hour = np.random.choice(range(24), p=hour_probs)
+            minute = np.random.randint(0, 60)
+            second = np.random.randint(0, 60)
+            ts = day_date.replace(hour=int(hour), minute=int(minute), second=int(second))
+
+            b_type = np.random.choice(business_types, p=business_probabilities)
+            if b_type == '金库调拨':
+                region = '浦东新区'
+                distance_km = 15.0
+            else:
+                region = np.random.choice(regions)
+                distance_km = distance_map[region] * np.random.uniform(0.9, 1.1)
+
+            # 时间 / 距离逻辑复用
+            if b_type == '金库调拨':
+                base_minutes = np.random.uniform(35, 50)
+                overtime_minutes = np.random.uniform(10, 25) if np.random.random() < 0.15 else 0
+                time_duration = base_minutes + overtime_minutes
+            elif b_type == '现金清点':
+                # 清点时间来自金额规模
+                if np.random.random() < 0.3:
+                    amount_large = True
+                    amount = np.random.uniform(1_000_000, 10_000_000)
+                else:
+                    amount_large = False
+                    amount = np.random.uniform(10_000, 800_000)
+                counting_res = calculate_cash_counting_cost(amount)
+                time_duration = counting_res['time_duration']
+            else:
+                traffic_factor = np.random.uniform(0.85, 1.35)
+                time_duration = calculate_realistic_time_duration_from_zhoupu(distance_km, b_type, traffic_factor)
+                amount = np.random.uniform(10_000, 1_000_000)
+
+            if b_type not in ['现金清点']:
+                # 现金清点已赋值 amount
+                if b_type == '金库调拨':
+                    amount = np.random.uniform(5_000_000, 20_000_000)
+
+            # 标准距离 & 超距
+            area_type = get_area_type_from_zhoupu(region)
+            area_classification = get_shanghai_area_classification_from_zhoupu()
+            standard_distance = area_classification[area_type]['standard_km'].get(b_type, 35)
+            over_info = calculate_over_distance_cost(distance_km, standard_distance, b_type)
+
+            # 成本组件
+            if b_type == '现金清点':
+                labor_cost = counting_res['labor_cost']
+                equipment_cost = counting_res['equipment_cost']
+                vehicle_cost = 0
+                over_distance_cost = 0
+            elif b_type == '金库调拨':
+                vault_res = calculate_vault_transfer_cost()
+                vehicle_cost = vault_res['vehicle_cost']
+                labor_cost = 0
+                equipment_cost = 0
+                over_distance_cost = over_info['over_distance_cost']
+            else:
+                time_hours = time_duration / 60
+                veh_cost, veh_detail = calculate_vehicle_cost(distance_km, time_hours, region)
+                vehicle_cost = veh_cost
+                labor_cost = 0
+                equipment_cost = distance_km * 2.8
+                over_distance_cost = over_info['over_distance_cost']
+
+            # 日级冲击乘子应用（不破坏原逻辑：原 total_cost 仅乘场景 multiplier + time_weight；此处多一层 cost_multiplier_day 标记）
+            scenario_multiplier = 1.0
+            for sc in active_shocks:
+                if sc == '高需求期':
+                    scenario_multiplier *= 1.1
+                elif sc == '紧急状况':
+                    scenario_multiplier *= 1.5
+                elif sc == '节假日':
+                    scenario_multiplier *= 1.5
+
+            time_weight = np.random.choice([1.0, 1.1, 1.3, 1.6], p=[0.4, 0.3, 0.2, 0.1])
+            base_total_cost = vehicle_cost + labor_cost + equipment_cost
+            total_cost = base_total_cost * scenario_multiplier * time_weight * cost_multiplier_day
+
+            # 初步异常判定：成本或时间/距离尾部
+            # 占位，稍后再统一基于集合统计添加最终 is_anomaly
+            records.append({
+                'start_time': ts,
+                'business_type': b_type,
+                'region': region,
+                'distance_km': distance_km,
+                'time_duration': time_duration,
+                'amount': amount,
+                'vehicle_cost': vehicle_cost,
+                'labor_cost': labor_cost,
+                'equipment_cost': equipment_cost,
+                'over_distance_cost': over_distance_cost,
+                'standard_distance': standard_distance,
+                'over_distance': over_info['over_distance'],
+                'base_total_cost': base_total_cost,
+                'scenario_multiplier': scenario_multiplier,
+                'time_weight': time_weight,
+                'cost_day_multiplier': cost_multiplier_day,
+                'total_cost': total_cost,
+                'shock_label': ','.join(active_shocks) if active_shocks else '正常'
+            })
+
+    df_sim = pd.DataFrame(records)
+    if df_sim.empty:
+        return df_sim
+
+    # 统一异常判断（保持风格）：根据分位+效率构造
+    cost_q90 = df_sim['total_cost'].quantile(0.9)
+    time_q85 = df_sim['time_duration'].quantile(0.85)
+    dist_q80 = df_sim['distance_km'].quantile(0.8)
+    df_sim['efficiency_ratio'] = np.random.beta(3, 2, len(df_sim))
+    df_sim['is_anomaly'] = (
+        (df_sim['total_cost'] > cost_q90) |
+        (df_sim['time_duration'] > time_q85) |
+        (df_sim['distance_km'] > dist_q80) |
+        (df_sim['efficiency_ratio'] < 0.3)
+    )
+
+    # 异常原因
+    anomaly_reasons = []
+    for _, r in df_sim.iterrows():
+        if r['is_anomaly']:
+            if r['total_cost'] > cost_q90:
+                reasons = ['设备故障延误', '路线拥堵严重', '人员配置不足', '紧急调度变更']
+            elif r['time_duration'] > time_q85:
+                reasons = ['操作流程复杂', '等待时间过长', '交接手续繁琐', '安全检查延时']
+            elif r['distance_km'] > dist_q80:
+                reasons = ['最优路线受阻', '临时改道', 'GPS导航偏差', '交通管制影响']
+            elif r['efficiency_ratio'] < 0.3:
+                reasons = ['人员操作失误', '系统响应缓慢', '协调配合问题', '应急预案启动']
+            else:
+                reasons = ['天气因素影响', '客户特殊要求', '监管部门检查', '突发安全事件']
+            anomaly_reasons.append(np.random.choice(reasons))
+        else:
+            anomaly_reasons.append('正常')
+    df_sim['anomaly_reason'] = anomaly_reasons
+    df_sim['date'] = df_sim['start_time'].dt.date
+    return df_sim
+
+def optimize_cost_allocation(
+    df: pd.DataFrame,
+    objective: str = 'min_total_cost',
+    anomaly_penalty: float = 0.2,
+    weight_bounds=(0.5, 1.5),
+    step: float = 0.1
+):
+    """成本分摊动态优化引擎（不修改原 total_cost，只提供推荐权重）。
+
+    思路:
+        假设可调系数 α(车辆), β(人工), γ(设备)，对基础成本组件进行再权重：
+            new_cost = α*vehicle_cost + β*labor_cost + γ*equipment_cost
+        目标函数:
+            1) min_total_cost: Σ new_cost
+            2) min_cost_with_anomaly_penalty: Σ new_cost * (1 + anomaly_penalty*is_anomaly)
+
+        约束: α,β,γ ∈ [bounds]；最终报告将正规化为占比。
+        采用网格搜索（避免引入外部依赖）。
+    返回:
+        dict: {baseline_total, best_total, improvement_pct, best_weights_raw, best_weights_normalized, objective_trace(DataFrame)}
+    """
+    if df.empty:
+        return {}
+    low, high = weight_bounds
+    weight_range = np.arange(low, high + 1e-9, step)
+
+    baseline_total = (df['vehicle_cost'] + df['labor_cost'] + df['equipment_cost']).sum()
+    best = None
+    records = []
+
+    for a in weight_range:
+        for b in weight_range:
+            for c in weight_range:
+                new_cost_components = a*df['vehicle_cost'] + b*df['labor_cost'] + c*df['equipment_cost']
+                if objective == 'min_total_cost':
+                    obj_val = new_cost_components.sum()
+                else:  # 带异常惩罚
+                    if 'is_anomaly' in df.columns:
+                        obj_val = (new_cost_components * (1 + anomaly_penalty * df['is_anomaly'].astype(int))).sum()
+                    else:
+                        obj_val = new_cost_components.sum()
+                records.append({'a': a, 'b': b, 'c': c, 'objective': obj_val})
+                if best is None or obj_val < best['objective']:
+                    best = {'a': a, 'b': b, 'c': c, 'objective': obj_val}
+
+    trace_df = pd.DataFrame(records)
+    norm_sum = best['a'] + best['b'] + best['c']
+    normalized = {k: best[k]/norm_sum for k in ['a','b','c']}
+
+    improvement_pct = (baseline_total - best['objective']) / baseline_total * 100 if baseline_total > 0 else 0
+    return {
+        'baseline_total': baseline_total,
+        'best_total': best['objective'],
+        'improvement_pct': improvement_pct,
+        'best_weights_raw': {k: best[k] for k in ['a','b','c']},
+        'best_weights_normalized': normalized,
+        'objective_trace': trace_df.sort_values('objective').head(50)  # 前50最优记录
+    }
 
 @st.cache_data(ttl=600)
 def run_monte_carlo_optimization(iterations=100000):
@@ -1298,23 +1577,23 @@ def generate_decision_support(df, predictions):
     recommendations = []
     
     if cost_change > 10:
-        recommendations.append("预测成本上升显著，建议增加运营预算10-15%")
-        recommendations.append("建议提前调整人员排班，优化路线规划")
+        recommendations.append("🚨 预测成本上升显著，建议增加运营预算10-15%")
+        recommendations.append("📋 建议提前调整人员排班，优化路线规划")
     elif cost_change > 5:
-        recommendations.append("预测成本轻微上升，建议加强成本控制")
-        recommendations.append("建议重点监控高成本业务类型")
+        recommendations.append("⚠️ 预测成本轻微上升，建议加强成本控制")
+        recommendations.append("🔍 建议重点监控高成本业务类型")
     elif cost_change < -5:
-        recommendations.append("预测成本下降，可考虑扩大业务规模")
-        recommendations.append("建议将节约的资源投入效率提升项目")
+        recommendations.append("📈 预测成本下降，可考虑扩大业务规模")
+        recommendations.append("💡 建议将节约的资源投入效率提升项目")
     else:
-        recommendations.append("成本趋势稳定，维持当前运营策略")
-        recommendations.append("建议持续优化业务流程")
+        recommendations.append("✅ 成本趋势稳定，维持当前运营策略")
+        recommendations.append("🎯 建议持续优化业务流程")
     
     business_type_analysis = df.groupby('business_type')['total_cost'].agg(['mean', 'count'])
     high_cost_business = business_type_analysis['mean'].idxmax()
     high_volume_business = business_type_analysis['count'].idxmax()
     
-    recommendations.append(f"重点关注：{high_cost_business}(高成本) 和 {high_volume_business}(高频次)")
+    recommendations.append(f"🎯 重点关注：{high_cost_business}(高成本) 和 {high_volume_business}(高频次)")
     
     return recommendations, cost_change
 
@@ -1371,7 +1650,10 @@ with current_time_container:
         <script>
         function updateBeijingTime(){
             var now = new Date();
-            var beijing = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+            // getTimezoneOffset() 返回 UTC - 本地时间（分钟），在北京为 -480
+            // 目标：北京时间 = 当前本地时间 + (UTC+8 与本地时区差值)
+            var offsetMinutes = now.getTimezoneOffset(); // 例：北京 -480, UTC 0, 纽约 300/240
+            var beijing = new Date(now.getTime() + (offsetMinutes + 8 * 60) * 60000);
             var Y = beijing.getFullYear();
             var M = String(beijing.getMonth()+1).padStart(2,'0');
             var D = String(beijing.getDate()).padStart(2,'0');
@@ -1392,11 +1674,17 @@ with current_time_container:
         )
         import streamlit.components.v1 as components
         components.html(clock_html, height=80)
+        st.caption("💡 时间每秒自动更新，仅更新时间，不刷新页面")
 
 # 生成数据
 df = generate_sample_data()
 historical_df = generate_extended_historical_data(60)
 cost_optimization = analyze_cost_optimization(df)
+try:
+    # 静默验证新模拟器（不改变原 df 展示逻辑与布局）
+    _df_sim_check = simulate_configurable_business_data(days=7, seed=123)
+except Exception:
+    _df_sim_check = None
 
 # ==================== 分区1：实时运营总览（对应PPT第5页）====================
 st.markdown('<h2 class="layer-title">📊 分区1：实时运营总览 - 全局监控与异常定位</h2>', unsafe_allow_html=True)
@@ -2912,4 +3200,3 @@ with col_status3:
 
 with col_status4:
     st.metric("模型准确率", f"{np.random.uniform(85, 95):.1f}%", "稳定运行")
-
