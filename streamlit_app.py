@@ -1347,17 +1347,50 @@ current_time_container = st.container()
 with current_time_container:
     col_time1, col_time2, col_time3 = st.columns([1, 2, 1])
     with col_time2:
+        # 创建一个空的容器用于时间显示
+        time_placeholder = st.empty()
+        
         # 获取正确的北京时间 (UTC+8)
         from datetime import datetime, timedelta
         utc_now = datetime.utcnow()
         beijing_time = utc_now + timedelta(hours=8)
-        st.info(f"🕒 当前时间：{beijing_time.strftime('%Y年%m月%d日 %H:%M:%S')} (北京时间)")
+        time_placeholder.info(f"🕒 当前时间：{beijing_time.strftime('%Y年%m月%d日 %H:%M:%S')} (北京时间)")
 
-# 自动刷新脚本
+# 自动刷新脚本 - 使用JavaScript实时更新时间
 st.markdown("""
+<div id="real-time-clock" style="text-align: center; padding: 10px; background-color: #e7f3ff; border-radius: 5px; margin: 10px 0;">
+    <strong id="clock-display">🕒 加载时间中...</strong>
+</div>
+
 <script>
-// 每30秒自动刷新页面以更新时间
-setTimeout(function() {
+function updateTime() {
+    const now = new Date();
+    // 转换为北京时间 (UTC+8)
+    const beijingTime = new Date(now.getTime() + (8 * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
+    
+    const year = beijingTime.getFullYear();
+    const month = String(beijingTime.getMonth() + 1).padStart(2, '0');
+    const day = String(beijingTime.getDate()).padStart(2, '0');
+    const hours = String(beijingTime.getHours()).padStart(2, '0');
+    const minutes = String(beijingTime.getMinutes()).padStart(2, '0');
+    const seconds = String(beijingTime.getSeconds()).padStart(2, '0');
+    
+    const timeString = `🕒 当前时间：${year}年${month}月${day}日 ${hours}:${minutes}:${seconds} (北京时间)`;
+    
+    const clockElement = document.getElementById('clock-display');
+    if (clockElement) {
+        clockElement.textContent = timeString;
+    }
+}
+
+// 立即更新时间
+updateTime();
+
+// 每秒更新时间
+setInterval(updateTime, 1000);
+
+// 每30秒自动刷新页面以更新数据
+setInterval(function() {
     window.location.reload(true);
 }, 30000);
 </script>
@@ -1411,12 +1444,17 @@ col_left, col_right = st.columns(2)
 with col_left:
     st.subheader("🌅 成本结构旭日图（业务类型→区域）")
     # 业务类型成本实时分布 - 旭日图展示金库运送、上门收款、金库调拨、现金清点
+    df_display = df.copy()
+    df_display['业务类型'] = df_display['business_type']
+    df_display['区域'] = df_display['region']
+    df_display['总成本'] = df_display['total_cost']
+    
     fig_business = px.sunburst(
-        df, 
-        path=['business_type', 'region'], 
-        values='total_cost',
+        df_display, 
+        path=['业务类型', '区域'], 
+        values='总成本',
         title="金库运送/上门收款/金库调拨/现金清点 - 业务成本分布",
-        color='total_cost',
+        color='总成本',
         color_continuous_scale='Viridis'
     )
     fig_business.update_layout(
@@ -1445,30 +1483,33 @@ with col_right:
     )
 
     # 业务总量趋势
-    business_hourly = df.groupby('hour').size().reset_index(name='count')
+    business_hourly = df.groupby('hour').size().reset_index(name='业务量')
     fig_trends.add_trace(
-        go.Scatter(x=business_hourly['hour'], y=business_hourly['count'], 
+        go.Scatter(x=business_hourly['hour'], y=business_hourly['业务量'], 
                    mode='lines+markers', name='业务量', line=dict(color='#007bff')),
         row=1, col=1
     )
 
     # 总成本趋势
+    hourly_stats['总成本'] = hourly_stats['total_cost']
     fig_trends.add_trace(
-        go.Scatter(x=hourly_stats['hour'], y=hourly_stats['total_cost'], 
+        go.Scatter(x=hourly_stats['hour'], y=hourly_stats['总成本'], 
                    mode='lines+markers', name='总成本', line=dict(color='#dc3545')),
         row=1, col=2
     )
 
     # 异常监控趋势
+    hourly_stats['异常率'] = hourly_stats['is_anomaly']*100
     fig_trends.add_trace(
-        go.Scatter(x=hourly_stats['hour'], y=hourly_stats['is_anomaly']*100, 
+        go.Scatter(x=hourly_stats['hour'], y=hourly_stats['异常率'], 
                    mode='lines+markers', name='异常率%', line=dict(color='#ffc107')),
         row=2, col=1
     )
 
     # 运营效率趋势
+    hourly_stats['效率'] = hourly_stats['efficiency_ratio']*100
     fig_trends.add_trace(
-        go.Scatter(x=hourly_stats['hour'], y=hourly_stats['efficiency_ratio']*100, 
+        go.Scatter(x=hourly_stats['hour'], y=hourly_stats['效率'], 
                    mode='lines+markers', name='效率%', line=dict(color='#28a745')),
         row=2, col=2
     )
@@ -1523,14 +1564,16 @@ with tab1:
     with col1:
         # 业务类型成本占比饼图
         business_costs = df.groupby('business_type')['total_cost'].sum().reset_index()
-        business_costs['display_name'] = business_costs['business_type'].apply(
+        business_costs['业务类型'] = business_costs['business_type']
+        business_costs['总成本'] = business_costs['total_cost']
+        business_costs['显示名称'] = business_costs['business_type'].apply(
             lambda x: f"{x} (浦东→浦西)" if x == '金库调拨' else x
         )
         
         fig_pie = px.pie(
             business_costs, 
-            values='total_cost', 
-            names='display_name',
+            values='总成本', 
+            names='显示名称',
             title="各业务类型成本占比分析",
             color_discrete_sequence=['#007bff', '#28a745', '#ffc107', '#dc3545']
         )
@@ -1544,12 +1587,15 @@ with tab1:
     with col2:
         # 业务类型平均成本对比
         business_avg_costs = df.groupby('business_type')['total_cost'].mean().reset_index()
+        business_avg_costs['业务类型'] = business_avg_costs['business_type']
+        business_avg_costs['平均成本'] = business_avg_costs['total_cost']
+        
         fig_business_bar = px.bar(
             business_avg_costs, 
-            x='business_type', 
-            y='total_cost',
+            x='业务类型', 
+            y='平均成本',
             title="各业务类型平均成本对比",
-            color='total_cost',
+            color='平均成本',
             color_continuous_scale='Viridis'
         )
         fig_business_bar.update_layout(
@@ -1568,10 +1614,13 @@ with tab2:
     with col1:
         # 小时均成本趋势线图
         hourly_costs = df.groupby('hour')['total_cost'].mean().reset_index()
+        hourly_costs['小时'] = hourly_costs['hour']
+        hourly_costs['平均成本'] = hourly_costs['total_cost']
+        
         fig_line = px.line(
             hourly_costs, 
-            x='hour', 
-            y='total_cost',
+            x='小时', 
+            y='平均成本',
             title="24小时成本变化趋势",
             markers=True
         )
@@ -1594,12 +1643,12 @@ with tab2:
             'business_type': 'count',
             'efficiency_ratio': 'mean'
         }).reset_index()
-        daily_historical.columns = ['date', 'total_cost', 'business_count', 'avg_efficiency']
+        daily_historical.columns = ['日期', '总成本', '业务量', '平均效率']
 
         fig_historical = go.Figure()
         fig_historical.add_trace(go.Scatter(
-            x=daily_historical['date'], 
-            y=daily_historical['business_count'],
+            x=daily_historical['日期'], 
+            y=daily_historical['业务量'],
             mode='lines+markers',
             name='业务量',
             line=dict(color='#007bff', width=3),
@@ -1625,12 +1674,15 @@ with tab3:
     with col1:
         # 区域平均成本条形图
         region_costs = df.groupby('region')['total_cost'].mean().reset_index()
+        region_costs['区域'] = region_costs['region']
+        region_costs['平均成本'] = region_costs['total_cost']
+        
         fig_heatmap = px.bar(
             region_costs, 
-            x='region', 
-            y='total_cost',
+            x='区域', 
+            y='平均成本',
             title="上海16区平均成本分布",
-            color='total_cost',
+            color='平均成本',
             color_continuous_scale='Viridis'
         )
         fig_heatmap.update_layout(
@@ -1672,9 +1724,12 @@ with tab4:
     with col1:
         # 场景分布饼图
         scenario_counts = df['market_scenario'].value_counts()
+        scenario_labels = ['正常', '高需求期', '紧急状况', '节假日']
+        scenario_mapping = {'正常': '正常', '高需求期': '高需求期', '紧急状况': '紧急状况', '节假日': '节假日'}
+        
         fig_scenario = px.pie(
             values=scenario_counts.values,
-            names=scenario_counts.index,
+            names=[scenario_mapping.get(name, name) for name in scenario_counts.index],
             title="当前市场场景分布",
             color_discrete_sequence=['#007bff', '#28a745', '#dc3545', '#17a2b8']
         )
@@ -1688,8 +1743,10 @@ with tab4:
     with col2:
         # 时段权重柱状图
         time_weights = cost_optimization['time_weights']
+        time_weight_names = ['早班(6-14)', '中班(14-22)', '晚班(22-6)', '节假日']
+        
         fig_weights = px.bar(
-            x=list(time_weights.keys()),
+            x=time_weight_names,
             y=list(time_weights.values()),
             title="时段成本权重动态配置",
             color=list(time_weights.values()),
@@ -1896,12 +1953,15 @@ col1, col2 = st.columns(2)
 with col1:
     # 1. 业务类型平均成本对比
     business_costs = df.groupby('business_type')['total_cost'].mean().reset_index()
+    business_costs['业务类型'] = business_costs['business_type']
+    business_costs['平均成本'] = business_costs['total_cost']
+    
     fig_business = px.bar(
         business_costs, 
-        x='business_type', 
-        y='total_cost',
+        x='业务类型', 
+        y='平均成本',
         title="1. 各业务类型平均成本对比",
-        color='total_cost',
+        color='平均成本',
         color_continuous_scale='Viridis'
     )
     fig_business.update_layout(
@@ -1914,12 +1974,15 @@ with col1:
 with col2:
     # 2. 区域成本热力图
     region_costs = df.groupby('region')['total_cost'].mean().reset_index()
+    region_costs['区域'] = region_costs['region']
+    region_costs['平均成本'] = region_costs['total_cost']
+    
     fig_region = px.bar(
         region_costs, 
-        x='region', 
-        y='total_cost',
+        x='区域', 
+        y='平均成本',
         title="2. 上海各区域平均成本分布",
-        color='total_cost',
+        color='平均成本',
         color_continuous_scale='Plasma'
     )
     fig_region.update_layout(
@@ -1935,10 +1998,13 @@ col3, col4 = st.columns(2)
 with col3:
     # 3. 24小时效率变化趋势
     hourly_efficiency = df.groupby('hour')['efficiency_ratio'].mean().reset_index()
+    hourly_efficiency['小时'] = hourly_efficiency['hour']
+    hourly_efficiency['效率比率'] = hourly_efficiency['efficiency_ratio']
+    
     fig_efficiency = px.line(
         hourly_efficiency, 
-        x='hour', 
-        y='efficiency_ratio',
+        x='小时', 
+        y='效率比率',
         title="3. 24小时效率变化趋势",
         markers=True
     )
@@ -1956,15 +2022,21 @@ with col3:
 
 with col4:
     # 4. 距离与成本关系散点图
-    sample_data = df.sample(min(100, len(df)))
+    sample_data = df.sample(min(100, len(df))).copy()
+    sample_data['距离(公里)'] = sample_data['distance_km']
+    sample_data['总成本'] = sample_data['total_cost']
+    sample_data['业务类型'] = sample_data['business_type']
+    sample_data['金额'] = sample_data['amount']
+    sample_data['效率比率'] = sample_data['efficiency_ratio']
+    
     fig_scatter = px.scatter(
         sample_data, 
-        x='distance_km', 
-        y='total_cost',
-        color='business_type',
-        size='amount',
+        x='距离(公里)', 
+        y='总成本',
+        color='业务类型',
+        size='金额',
         title="4. 距离与成本关系分析",
-        hover_data=['efficiency_ratio']
+        hover_data=['效率比率']
     )
     fig_scatter.update_layout(
         paper_bgcolor='white',
@@ -2010,12 +2082,15 @@ with col5:
 with col6:
     # 6. 市场场景影响
     scenario_impact = df.groupby('market_scenario')['total_cost'].mean().reset_index()
+    scenario_impact['市场场景'] = scenario_impact['market_scenario']
+    scenario_impact['平均成本'] = scenario_impact['total_cost']
+    
     fig_scenario = px.bar(
         scenario_impact, 
-        x='market_scenario', 
-        y='total_cost',
+        x='市场场景', 
+        y='平均成本',
         title="6. 不同市场场景平均成本",
-        color='total_cost',
+        color='平均成本',
         color_continuous_scale='Oranges'
     )
     fig_scenario.update_layout(
@@ -2094,15 +2169,15 @@ with col_pred1:
     predicted_costs = actual_costs + np.random.normal(0, 50, 30)
 
     pred_comparison_data = pd.DataFrame({
-        'date': days,
-        'actual': actual_costs,
-        'predicted': predicted_costs
+        '日期': days,
+        '实际': actual_costs,
+        '预测': predicted_costs
     })
 
     fig_pred_comparison = px.line(
         pred_comparison_data, 
-        x='date', 
-        y=['actual', 'predicted'],
+        x='日期', 
+        y=['实际', '预测'],
         title="预测vs实际成本对比",
         labels={'value': '成本 (元)', 'variable': '类型'}
     )
@@ -2473,9 +2548,12 @@ with anomaly_tabs[1]:
             st.metric("平均距离", f"{normal_data['distance_km'].mean():.1f}km")
         
         # 正常业务成本分布
+        normal_data_display = normal_data.copy()
+        normal_data_display['总成本'] = normal_data_display['total_cost']
+        
         fig_normal_dist = px.histogram(
-            normal_data,
-            x='total_cost',
+            normal_data_display,
+            x='总成本',
             title="正常业务成本分布",
             nbins=30,
             color_discrete_sequence=['#28a745']
@@ -2524,9 +2602,12 @@ with anomaly_tabs[2]:
         col_anom1, col_anom2 = st.columns(2)
         
         with col_anom1:
+            anomaly_cost_display = anomaly_data.copy()
+            anomaly_cost_display['总成本'] = anomaly_cost_display['total_cost']
+            
             fig_anomaly_cost = px.box(
-                anomaly_data,
-                y='total_cost',
+                anomaly_cost_display,
+                y='总成本',
                 title="异常业务成本箱线图",
                 color_discrete_sequence=['#dc3545']
             )
@@ -2538,13 +2619,19 @@ with anomaly_tabs[2]:
             st.plotly_chart(fig_anomaly_cost, use_container_width=True, key="anomaly_cost_box")
         
         with col_anom2:
+            anomaly_scatter_display = anomaly_data.copy()
+            anomaly_scatter_display['距离(公里)'] = anomaly_scatter_display['distance_km']
+            anomaly_scatter_display['总成本'] = anomaly_scatter_display['total_cost']
+            anomaly_scatter_display['业务类型'] = anomaly_scatter_display['business_type']
+            anomaly_scatter_display['时长(分钟)'] = anomaly_scatter_display['time_duration']
+            
             fig_anomaly_scatter = px.scatter(
-                anomaly_data,
-                x='distance_km',
-                y='total_cost',
-                color='business_type',
+                anomaly_scatter_display,
+                x='距离(公里)',
+                y='总成本',
+                color='业务类型',
                 title="异常业务距离vs成本关系",
-                size='time_duration'
+                size='时长(分钟)'
             )
             fig_anomaly_scatter.update_layout(
                 paper_bgcolor='white',
@@ -2595,9 +2682,15 @@ with anomaly_tabs[3]:
         with col_feat2:
             # 异常时间分布
             anomaly_hour_counts = anomaly_data['hour'].value_counts().sort_index()
+            anomaly_hour_display = pd.DataFrame({
+                '小时': anomaly_hour_counts.index,
+                '异常数量': anomaly_hour_counts.values
+            })
+            
             fig_anomaly_time = px.bar(
-                x=anomaly_hour_counts.index,
-                y=anomaly_hour_counts.values,
+                anomaly_hour_display,
+                x='小时',
+                y='异常数量',
                 title="异常业务时间分布",
                 color_discrete_sequence=['#dc3545']
             )
@@ -2659,15 +2752,18 @@ with anomaly_tabs[3]:
             
             # 按日期和异常原因统计
             if 'start_time' in anomaly_data.columns:
-                anomaly_data['date'] = anomaly_data['start_time'].dt.date
-                daily_reason = anomaly_data.groupby(['date', 'anomaly_reason']).size().reset_index(name='count')
+                anomaly_data_copy = anomaly_data.copy()
+                anomaly_data_copy['日期'] = anomaly_data_copy['start_time'].dt.date
+                anomaly_data_copy['异常原因'] = anomaly_data_copy['anomaly_reason']
+                
+                daily_reason = anomaly_data_copy.groupby(['日期', '异常原因']).size().reset_index(name='数量')
                 
                 # 堆叠柱状图显示每日各种异常原因数量
                 fig_reason_trend = px.bar(
                     daily_reason,
-                    x='date',
-                    y='count',
-                    color='anomaly_reason',
+                    x='日期',
+                    y='数量',
+                    color='异常原因',
                     title="每日异常原因分布趋势",
                     color_discrete_sequence=px.colors.qualitative.Set3
                 )
@@ -2690,16 +2786,16 @@ with anomaly_tabs[4]:
     
     if len(anomaly_data) > 0:
         # 从start_time提取日期信息
-        anomaly_data['date'] = anomaly_data['start_time'].dt.date
+        anomaly_data['日期'] = anomaly_data['start_time'].dt.date
         
         # 按日期统计异常数量
-        anomaly_daily = anomaly_data.groupby('date').size().reset_index(name='anomaly_count')
+        anomaly_daily = anomaly_data.groupby('日期').size().reset_index(name='异常数量')
         
         # 趋势图
         fig_trend = px.line(
             anomaly_daily,
-            x='date',
-            y='anomaly_count',
+            x='日期',
+            y='异常数量',
             title="异常业务数量趋势",
             color_discrete_sequence=['#dc3545']
         )
@@ -2718,7 +2814,7 @@ with anomaly_tabs[4]:
         if len(anomaly_daily) >= 7:
             # 简单移动平均预测
             window = min(7, len(anomaly_daily))
-            moving_avg = anomaly_daily['anomaly_count'].rolling(window=window).mean().iloc[-1]
+            moving_avg = anomaly_daily['异常数量'].rolling(window=window).mean().iloc[-1]
             
             col_pred1, col_pred2, col_pred3 = st.columns(3)
             
@@ -2726,7 +2822,7 @@ with anomaly_tabs[4]:
                 st.metric("7天平均异常数", f"{moving_avg:.1f}")
                 
             with col_pred2:
-                trend = "上升" if anomaly_daily['anomaly_count'].iloc[-1] > moving_avg else "下降"
+                trend = "上升" if anomaly_daily['异常数量'].iloc[-1] > moving_avg else "下降"
                 st.metric("异常趋势", trend)
                 
             with col_pred3:
@@ -2798,12 +2894,44 @@ with col_status2:
     st.metric("系统响应时间", "<2秒", "性能优秀")
 
 with col_status3:
-    # 获取正确的北京时间
-    from datetime import datetime, timedelta
-    utc_now = datetime.utcnow()
-    beijing_time = utc_now + timedelta(hours=8)
-    time_str = beijing_time.strftime("%Y-%m-%d %H:%M:%S")
-    st.metric("当前系统时间", time_str, "北京时间")
+    # 创建实时更新的系统时间显示
+    st.markdown("""
+    <div id="system-time-display">
+        <div style="text-align: center;">
+            <div style="color: #262730; font-size: 1.25rem; font-weight: 600;">当前系统时间</div>
+            <div id="system-time" style="color: #262730; font-size: 2rem; font-weight: 400;">加载中...</div>
+            <div style="color: #737373; font-size: 0.875rem;">北京时间</div>
+        </div>
+    </div>
+    
+    <script>
+    function updateSystemTime() {
+        const now = new Date();
+        // 转换为北京时间 (UTC+8)
+        const beijingTime = new Date(now.getTime() + (8 * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
+        
+        const year = beijingTime.getFullYear();
+        const month = String(beijingTime.getMonth() + 1).padStart(2, '0');
+        const day = String(beijingTime.getDate()).padStart(2, '0');
+        const hours = String(beijingTime.getHours()).padStart(2, '0');
+        const minutes = String(beijingTime.getMinutes()).padStart(2, '0');
+        const seconds = String(beijingTime.getSeconds()).padStart(2, '0');
+        
+        const timeString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        
+        const systemTimeElement = document.getElementById('system-time');
+        if (systemTimeElement) {
+            systemTimeElement.textContent = timeString;
+        }
+    }
+    
+    // 立即更新时间
+    updateSystemTime();
+    
+    // 每秒更新时间
+    setInterval(updateSystemTime, 1000);
+    </script>
+    """, unsafe_allow_html=True)
 
 with col_status4:
     st.metric("模型准确率", f"{np.random.uniform(85, 95):.1f}%", "稳定运行")
