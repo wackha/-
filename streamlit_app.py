@@ -1298,23 +1298,23 @@ def generate_decision_support(df, predictions):
     recommendations = []
     
     if cost_change > 10:
-        recommendations.append("🚨 预测成本上升显著，建议增加运营预算10-15%")
-        recommendations.append("📋 建议提前调整人员排班，优化路线规划")
+        recommendations.append("预测成本上升显著，建议增加运营预算10-15%")
+        recommendations.append("建议提前调整人员排班，优化路线规划")
     elif cost_change > 5:
-        recommendations.append("⚠️ 预测成本轻微上升，建议加强成本控制")
-        recommendations.append("🔍 建议重点监控高成本业务类型")
+        recommendations.append("预测成本轻微上升，建议加强成本控制")
+        recommendations.append("建议重点监控高成本业务类型")
     elif cost_change < -5:
-        recommendations.append("📈 预测成本下降，可考虑扩大业务规模")
-        recommendations.append("💡 建议将节约的资源投入效率提升项目")
+        recommendations.append("预测成本下降，可考虑扩大业务规模")
+        recommendations.append("建议将节约的资源投入效率提升项目")
     else:
-        recommendations.append("✅ 成本趋势稳定，维持当前运营策略")
-        recommendations.append("🎯 建议持续优化业务流程")
+        recommendations.append("成本趋势稳定，维持当前运营策略")
+        recommendations.append("建议持续优化业务流程")
     
     business_type_analysis = df.groupby('business_type')['total_cost'].agg(['mean', 'count'])
     high_cost_business = business_type_analysis['mean'].idxmax()
     high_volume_business = business_type_analysis['count'].idxmax()
     
-    recommendations.append(f"🎯 重点关注：{high_cost_business}(高成本) 和 {high_volume_business}(高频次)")
+    recommendations.append(f"重点关注：{high_cost_business}(高成本) 和 {high_volume_business}(高频次)")
     
     return recommendations, cost_change
 
@@ -1392,7 +1392,6 @@ with current_time_container:
         )
         import streamlit.components.v1 as components
         components.html(clock_html, height=80)
-        st.caption("💡 时间每秒自动更新，仅更新时间，不刷新页面")
 
 # 生成数据
 df = generate_sample_data()
@@ -2913,3 +2912,4 @@ with col_status3:
 
 with col_status4:
     st.metric("模型准确率", f"{np.random.uniform(85, 95):.1f}%", "稳定运行")
+
