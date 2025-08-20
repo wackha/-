@@ -16,6 +16,21 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# 自动刷新配置
+import time
+refresh_interval = 30  # 30秒刷新一次
+
+# 添加自动刷新机制
+placeholder = st.empty()
+if 'last_refresh' not in st.session_state:
+    st.session_state.last_refresh = time.time()
+
+# 检查是否需要刷新
+current_time = time.time()
+if current_time - st.session_state.last_refresh > refresh_interval:
+    st.session_state.last_refresh = current_time
+    st.rerun()
+
 # [保持所有原有的数据生成和计算函数]
 # 包括：RealDataConnector, CSS样式, 所有距离计算函数等...
 
@@ -1361,20 +1376,32 @@ with current_time_container:
         # 显示当前时间
         current_time_str = display_realtime_clock()
         st.info(f"🕒 当前时间：{current_time_str} (北京时间)")
-        st.caption("💡 页面每30秒自动刷新更新时间和数据")
-        
-        # 添加一个自动刷新按钮
-        if st.button("� 刷新时间", key="refresh_time"):
-            st.rerun()
-
 
 
 # 自动刷新脚本 - 30秒自动刷新
 st.markdown("""
+<meta http-equiv="refresh" content="30">
+""", unsafe_allow_html=True)
+
+st.markdown("""
 <script>
+// 强制刷新 - 多重保险
 setTimeout(function(){
-    window.location.reload();
+    window.location.reload(true);
 }, 30000);
+
+setInterval(function(){
+    window.location.reload(true);
+}, 30000);
+
+// 页面可见性API - 当页面重新可见时也刷新
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        setTimeout(function(){
+            window.location.reload(true);
+        }, 1000);
+    }
+});
 </script>
 """, unsafe_allow_html=True)
 
